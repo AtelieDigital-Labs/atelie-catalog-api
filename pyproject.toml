@@ -3,10 +3,12 @@ name = "atelie-catalog-api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "fastapi[standard]>=0.136.0",
     "pydantic>=2.13.3",
+    "pydantic-settings>=2.14.0",
     "sqlalchemy>=2.0.49",
 ]
 
@@ -26,9 +28,7 @@ extend-exclude = ['migrations', 'alembic']
 [tool.ruff.lint]
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
-# Removi o 'FAST' porque ele é um plugin específico que pode não ser necessário agora
-# Se o código do 200 continuar irritando, adicione a linha abaixo:
-# ignore = ['PLR2004']
+
 
 [tool.ruff.format]
 preview = true
@@ -39,7 +39,7 @@ pythonpath = "."
 addopts = '-p no:warnings'
 
 [tool.taskipy.tasks]
-# Linters e Formatação (Igual ao seu antigo)
+# Linters e Formatação 
 lint = 'ruff check . && ruff check --diff .'
 format = 'ruff check . --fix && ruff format .'
 
