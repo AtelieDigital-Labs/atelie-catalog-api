@@ -1,0 +1,52 @@
+[project]
+name = "atelie-catalog-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.136.0",
+    "pydantic>=2.13.3",
+    "sqlalchemy>=2.0.49",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.11",
+    "taskipy>=1.14.1",
+]
+
+[tool.ruff]
+line-length = 79
+extend-exclude = ['migrations', 'alembic']
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+# Removi o 'FAST' porque ele é um plugin específico que pode não ser necessário agora
+# Se o código do 200 continuar irritando, adicione a linha abaixo:
+# ignore = ['PLR2004']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = '-p no:warnings'
+
+[tool.taskipy.tasks]
+# Linters e Formatação (Igual ao seu antigo)
+lint = 'ruff check . && ruff check --diff .'
+format = 'ruff check . --fix && ruff format .'
+
+# Testes
+pre_test = 'task lint'
+test = 'pytest -s -x --cov=app -vv'
+post_test = 'coverage html'
+
+# Execução
+run = 'fastapi dev app/main.py'
