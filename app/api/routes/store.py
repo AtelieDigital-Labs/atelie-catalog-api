@@ -13,9 +13,11 @@ from app.schemas.store import (
     CategoryList,
     CategoryPublic,
     CategorySchema,
+    CategoryUpdate,
     StoreList,
     StorePublic,
     StoreSchema,
+    StoreUpdate,
 )
 
 router = APIRouter(prefix='/stores', tags=['stores'])
@@ -101,3 +103,71 @@ async def list_stores(session: Session, limit: int = 10, offset: int = 0):
     stores = result.scalars().all()
 
     return {'stores': stores}
+
+
+@router.patch('/{store_id}', response_model=StorePublic)
+async def update_store(
+    store_id: int, payload: StoreUpdate, user: CurrentUser, session: Session
+):
+
+    query = (
+        select(Store)
+        .where(Store.id == store_id, Store.artisan_id == user.id)
+        .options(joinedload(Store.category))
+    )
+
+    result = await session.execute(query)
+    db_store = result.scalar_one_or_none()
+
+    if not db_store:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Loja não encontrada ou você não possui permissão '
+            'para editá-la',
+        )
+
+    update_data = payload.model_dump(exclude_unset=True,exclude_none=True)
+    for key, value in update_data.items():
+        setattr(db_store, key, value)
+
+    session.add(db_store)
+    await session.commit()
+    await session.refresh(db_store)
+
+    return db_store
+
+
+@router.patch('/categories/{category_id}', response_model=CategoryPublic)
+async def update_category(
+    category_id: int,
+    payload: CategoryUpdate,
+    user: CurrentUser,
+    session: Session,
+):
+
+    db_category = await session.get(StoreCategory, category_id)
+
+    if not db_category:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail='Categoria não encontrada'
+        )
+
+    if payload.name:
+        query_check = select(StoreCategory).where(
+            StoreCategory.name == payload.name
+        )
+        result_check = await session.execute(query_check)
+        if result_check.scalar():
+            raise HTTPException(
+                status_code=HTTPStatus.BAD_REQUEST,
+                detail='Este nome de categoria já está em uso',
+            )
+
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(db_category, key, value)
+
+    session.add(db_category)
+    await session.commit()
+    await session.refresh(db_category)
+
+    return db_category

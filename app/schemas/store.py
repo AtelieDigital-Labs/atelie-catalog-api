@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,6 +19,10 @@ class CategoryPublic(CategorySchema):
 
 class CategoryList(BaseModel):
     categories: list[CategoryPublic]
+
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
 
 
 class StoreSchema(BaseModel):
@@ -47,12 +52,10 @@ class StoreList(BaseModel):
 
 
 class StoreUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=3, max_length=150)
-    description: str | None = Field(default=None, max_length=500)
-    category_id: int | None = Field(default=None)
-    image: str | None = Field(default=None, max_length=255)
-    banner: str | None = Field(default=None, max_length=255)
-
+    
+    description: Optional[str] = Field(default=None, max_length=500)
+    image: Optional[str] = Field(default=None, max_length=255)
+    banner: Optional[str] = Field(default=None, max_length=255)
 
 class FilterPage(BaseModel):
     offset: int = Field(ge=0, default=0)

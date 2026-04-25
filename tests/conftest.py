@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_session
-from app.core.security import get_current_user
 from app.main import app
 from app.models.store import Store, StoreCategory, table_registry
 
@@ -56,22 +55,34 @@ async def category(session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def client(session):
-
+async def user():
     class MockUser:
-        id = '1'
+        id = '1'  # Mesmo ID que da store
         email = 'artesao@teste.com'
         username = 'artesao_fake'
+        token = 'fake-token-artesao-1'  # O teste vai ler isso aqui
 
+    return MockUser()
+
+
+# 2. Fixture de outro Usuário (Para testar o erro 403 Forbidden)
+@pytest_asyncio.fixture
+async def other_user():
+    class MockOtherUser:
+        id = '999'  # ID diferente para falhar na validação de dono
+        email = 'outro@teste.com'
+        username = 'outro_artesao'
+        token = 'fake-token-outro'
+
+    return MockOtherUser()
+
+
+@pytest_asyncio.fixture
+async def client(session):
     async def _get_test_db():
         yield session
 
-    async def _get_current_user_override():
-        return MockUser()
-
-    # Sobrescreve as dependências do FastAPI
     app.dependency_overrides[get_session] = _get_test_db
-    app.dependency_overrides[get_current_user] = _get_current_user_override
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url='http://test'

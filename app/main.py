@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routes import store,auth_test
+from app.api.routes import auth_test, store
 
 app = FastAPI()
 
