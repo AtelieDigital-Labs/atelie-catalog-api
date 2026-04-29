@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy import ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import (
     Mapped,
     mapped_as_dataclass,
@@ -11,6 +11,23 @@ from sqlalchemy.orm import (
 
 # Cria a instância do registro
 table_registry = registry()
+
+
+@mapped_as_dataclass(table_registry)
+class Address:
+    __tablename__ = 'address'
+
+    id: Mapped[int] = mapped_column(primary_key=True, init=False)
+    street: Mapped[str] = mapped_column(String(255))
+    number: Mapped[int] = mapped_column(Integer)
+    neighborhood: Mapped[str] = mapped_column(String(255))
+    city: Mapped[str] = mapped_column(String(100))
+    state: Mapped[str] = mapped_column(String(2))
+    zip_code: Mapped[str] = mapped_column(String(9))
+
+    complement: Mapped[str | None] = mapped_column(String(255), default=None)
+    store_id: Mapped[int] = mapped_column(ForeignKey('stores.id'), init=False)
+    store: Mapped['Store'] = relationship(init=False, back_populates='address')
 
 
 @mapped_as_dataclass(table_registry)
@@ -41,6 +58,13 @@ class Store:
     )
     image: Mapped[str | None] = mapped_column(String(255), default=None)
     banner: Mapped[str | None] = mapped_column(String(255), default=None)
+
+    address: Mapped['Address'] = relationship(
+        init=False,
+        back_populates='store',
+        uselist=False,
+        cascade='all, delete-orphan',
+    )
     created_at: Mapped[datetime] = mapped_column(
         init=False, server_default=func.now()
     )

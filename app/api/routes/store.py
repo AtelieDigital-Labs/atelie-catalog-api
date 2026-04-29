@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 
 from app.core.database import get_session
 from app.core.security import CurrentUser
-from app.models.store import Store, StoreCategory
+from app.models.store import Address, Store, StoreCategory
 from app.schemas.store import (
     CategoryList,
     CategoryPublic,
@@ -36,7 +36,10 @@ async def create_category(
 
     query = select(StoreCategory).where(StoreCategory.name == category.name)
     result = await session.execute(query)
-    if result.scalar():
+
+    existing_category = result.scalar_one_or_none()
+
+    if existing_category:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
             detail='Esta categoria já está cadastrada',
@@ -78,13 +81,25 @@ async def create_store(
         artisan_id=user.id,
     )
 
+    db_address = Address(
+        street=payload.address.street,
+        number=payload.address.number,
+        neighborhood=payload.address.neighborhood,
+        city=payload.address.city,
+        state=payload.address.state,
+        zip_code=payload.address.zip_code,
+        complement=payload.address.complement,
+    )
+
+    db_store.address = db_address
+
     session.add(db_store)
     await session.commit()
 
     query = (
         select(Store)
         .where(Store.id == db_store.id)
-        .options(joinedload(Store.category))
+        .options(joinedload(Store.category), joinedload(Store.address))
     )
     result = await session.execute(query)
     return result.scalar_one()
@@ -95,7 +110,7 @@ async def list_stores(session: Session, limit: int = 10, offset: int = 0):
 
     query = (
         select(Store)
-        .options(joinedload(Store.category))
+        .options(joinedload(Store.category), joinedload(Store.address))
         .limit(limit)
         .offset(offset)
     )
@@ -113,7 +128,7 @@ async def update_store(
     query = (
         select(Store)
         .where(Store.id == store_id, Store.artisan_id == user.id)
-        .options(joinedload(Store.category))
+        .options(joinedload(Store.category), joinedload(Store.address))
     )
 
     result = await session.execute(query)
@@ -122,19 +137,33 @@ async def update_store(
     if not db_store:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
-            detail='Loja não encontrada ou você não possui permissão '
-            'para editá-la',
+            detail='Loja não encontrada ou você não possui permissão para '
+            'editá-la',
         )
 
-    update_data = payload.model_dump(exclude_unset=True,exclude_none=True)
+    update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
+
+    if 'address' in update_data:
+        address_data = update_data.pop('address')
+        if db_store.address:
+            for key, value in address_data.items():
+                setattr(db_store.address, key, value)
+        else:
+            new_address = Address(**address_data)
+            new_address.store_id = db_store.id
+
+            session.add(new_address)
+            db_store.address = new_address
+
+    # Atualização dos campos da Loja
     for key, value in update_data.items():
         setattr(db_store, key, value)
 
     session.add(db_store)
     await session.commit()
-    await session.refresh(db_store)
 
-    return db_store
+    result = await session.execute(query)
+    return result.scalar_one()
 
 
 @router.patch('/categories/{category_id}', response_model=CategoryPublic)

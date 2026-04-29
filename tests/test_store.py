@@ -26,8 +26,31 @@ async def test_categories_flow(client, user):
 
 
 @pytest.mark.asyncio
-async def test_create_store_success(client, category, user):  # Adicionado user
-    # Precisamos injetar o user no override para o ID bater com o token
+async def test_create_category_duplicate(client, user):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    resp1 = await client.post(
+        '/stores/categories',
+        json={'name': 'Bordado'},
+        headers={'Authorization': f'Bearer {user.token}'},
+    )
+    assert resp1.status_code == HTTPStatus.CREATED
+
+    resp2 = await client.post(
+        '/stores/categories',
+        json={'name': 'Bordado'},
+        headers={'Authorization': f'Bearer {user.token}'},
+    )
+
+    assert resp2.status_code == HTTPStatus.BAD_REQUEST
+    assert resp2.json()['detail'] == 'Esta categoria já está cadastrada'
+
+    app.dependency_overrides.pop(get_current_user)
+
+
+@pytest.mark.asyncio
+async def test_create_store_success(client, category, user):
+
     app.dependency_overrides[get_current_user] = lambda: user
 
     payload = {
@@ -36,6 +59,14 @@ async def test_create_store_success(client, category, user):  # Adicionado user
         'category_id': category.id,
         'image': 'http://foto.jpg',
         'banner': 'http://banner.jpg',
+        'address': {
+            'street': 'Rua A',
+            'number': 333,
+            'neighborhood': 'Centro',
+            'city': 'Pau dos Ferros',
+            'state': 'RN',
+            'zip_code': '59000-000',
+        },
     }
 
     response = await client.post(
@@ -47,6 +78,7 @@ async def test_create_store_success(client, category, user):  # Adicionado user
     assert response.status_code == HTTPStatus.CREATED
     data = response.json()
     assert data['name'] == 'Ateliê B'
+    assert data['address']['street'] == 'Rua A'
     assert data['artisan_id'] == user.id
 
     app.dependency_overrides.pop(get_current_user)
@@ -58,7 +90,18 @@ async def test_create_store_invalid_category(client, user):
 
     response = await client.post(
         '/stores/',
-        json={'name': 'Loja Errada', 'category_id': 9999},
+        json={
+            'name': 'Loja Errada',
+            'category_id': 9999,
+            'address': {
+                'street': 'Rua de Teste',
+                'number': 123,
+                'neighborhood': 'Bairro de Teste',
+                'city': 'Cidade',
+                'state': 'RN',
+                'zip_code': '59000-000',
+            },
+        },
         headers={'Authorization': f'Bearer {user.token}'},
     )
     assert response.status_code == HTTPStatus.NOT_FOUND
@@ -118,6 +161,30 @@ async def test_patch_store_profile_success(client, user, store):
     assert res_json['image'] == 'http://novo-perfil.jpg'
     assert res_json['banner'] == 'http://novo-banner.jpg'
     assert res_json['name'] == store.name
+
+    app.dependency_overrides.pop(get_current_user)
+
+
+@pytest.mark.asyncio
+async def test_patch_store_address_success(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    new_street = 'Nova Rua Atualizada'
+    new_number = 999
+
+    payload = {'address': {'street': new_street, 'number': new_number}}
+
+    response = await client.patch(
+        f'/stores/{store.id}',
+        json=payload,
+        headers={'Authorization': f'Bearer {user.token}'},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+
+    res_json = response.json()
+    assert res_json['address']['street'] == new_street
+    assert res_json['address']['number'] == new_number
 
     app.dependency_overrides.pop(get_current_user)
 
