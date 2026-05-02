@@ -22,7 +22,7 @@ services:
     container_name: atelie_api
     image: atelie_catalog_api
     ports:
-      - "8000:8000"
+      - "8008:8000"
     depends_on:
       catalog_database:
         condition: service_healthy
