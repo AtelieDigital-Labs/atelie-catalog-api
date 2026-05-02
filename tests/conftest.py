@@ -1,4 +1,5 @@
 import factory
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
@@ -8,33 +9,47 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import joinedload
-from sqlalchemy.pool import StaticPool
+from testcontainers.postgres import PostgresContainer
 
 from app.core.database import get_session
 from app.main import app
 from app.models.store import Address, Store, StoreCategory, table_registry
 
-DATABASE_URL = 'sqlite+aiosqlite:///:memory:'
 
-engine = create_async_engine(
-    DATABASE_URL,
-    connect_args={'check_same_thread': False},
-    poolclass=StaticPool,
-)
+@pytest.fixture(scope='session')
+def engine():
+    # Removendo o driver='psycopg' daqui para termos controle total da URL
+    with PostgresContainer('postgres:16') as postgres:
+        # Pegamos os dados crus do container
+        host = postgres.get_container_host_ip()
+        port = postgres.get_exposed_port(postgres.port)
+        user = postgres.username
+        password = postgres.password
+        db = postgres.dbname
 
-TestingSessionLocal = async_sessionmaker(
-    bind=engine, expire_on_commit=False, class_=AsyncSession
-)
+        # Montamos a URL manualmente no formato correto para o SQLAlchemy async
+        url = f'postgresql+psycopg://{user}:{password}@{host}:{port}/{db}'
+
+        _engine = create_async_engine(url)
+        yield _engine
 
 
+# Recebe a 'engine' do container e limpa os dados após cada teste.
 @pytest_asyncio.fixture
-async def session():
-    async with engine.connect() as conn:
+async def session(engine):
+    # Cria as tabelas antes do teste
+    async with engine.begin() as conn:
         await conn.run_sync(table_registry.metadata.create_all)
+
+    # Cria a sessão para o teste usar
+    TestingSessionLocal = async_sessionmaker(
+        bind=engine, expire_on_commit=False, class_=AsyncSession
+    )
 
     async with TestingSessionLocal() as session:
         yield session
 
+    # Limpa as tabelas após o teste (Teardown)
     async with engine.begin() as conn:
         await conn.run_sync(table_registry.metadata.drop_all)
 
@@ -59,10 +74,10 @@ async def category(session: AsyncSession):
 @pytest_asyncio.fixture
 async def user():
     class MockUser:
-        id = '1'  
+        id = '1'
         email = 'artesao@teste.com'
         username = 'artesao_fake'
-        token = 'fake-token-artesao-1'  
+        token = 'fake-token-artesao-1'
 
     return MockUser()
 
@@ -70,7 +85,7 @@ async def user():
 @pytest_asyncio.fixture
 async def other_user():
     class MockOtherUser:
-        id = '999' 
+        id = '999'
         email = 'outro@teste.com'
         username = 'outro_artesao'
         token = 'fake-token-outro'
@@ -101,7 +116,6 @@ class StoreFactory(factory.Factory):
     description = 'Uma descrição de teste para a loja'
     image = 'http://image.com/foto.jpg'
     banner = 'http://image.com/banner.jpg'
-    
 
 
 class AddressFactory(factory.Factory):

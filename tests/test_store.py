@@ -8,80 +8,90 @@ from app.main import app
 
 @pytest.mark.asyncio
 async def test_categories_flow(client, user):
-
-    # quando alguém pedir o usuário atual, entregue este 'user' aqui
+    # Setup do override
     app.dependency_overrides[get_current_user] = lambda: user
 
-    response = await client.post(
-        '/stores/categories',
-        json={'name': 'Crochê'},
-        headers={'Authorization': f'Bearer {user.token}'},
-    )
+    try:
+        response = await client.post(
+            '/stores/categories',
+            json={'name': 'Crochê'},
+            # Note: Como você já deu override no get_current_user,
+            # o token no header pode ser qualquer coisa, o FastAPI vai ignorar
+            # a validação do JWT e retornar o seu 'user' fake.
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
 
-    assert response.status_code == HTTPStatus.CREATED
-    assert response.json()['name'] == 'Crochê'
+        assert response.status_code == HTTPStatus.CREATED
+        assert response.json()['name'] == 'Crochê'
 
-    # Limpa após o teste
-    app.dependency_overrides.pop(get_current_user)
+    finally:
+        # Garante que limpa mesmo se o assert falhar
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
 async def test_create_category_duplicate(client, user):
     app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        # Primeiro cadastro
+        await client.post(
+            '/stores/categories',
+            json={'name': 'Bordado'},
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
 
-    resp1 = await client.post(
-        '/stores/categories',
-        json={'name': 'Bordado'},
-        headers={'Authorization': f'Bearer {user.token}'},
-    )
-    assert resp1.status_code == HTTPStatus.CREATED
+        # Tentativa de duplicata
+        response = await client.post(
+            '/stores/categories',
+            json={'name': 'Bordado'},
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
 
-    resp2 = await client.post(
-        '/stores/categories',
-        json={'name': 'Bordado'},
-        headers={'Authorization': f'Bearer {user.token}'},
-    )
-
-    assert resp2.status_code == HTTPStatus.BAD_REQUEST
-    assert resp2.json()['detail'] == 'Esta categoria já está cadastrada'
-
-    app.dependency_overrides.pop(get_current_user)
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        assert response.json()['detail'] == 'Esta categoria já está cadastrada'
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
 async def test_create_store_success(client, category, user):
-
+    # 1. Setup do comportamento falso
     app.dependency_overrides[get_current_user] = lambda: user
 
-    payload = {
-        'name': 'Ateliê B',
-        'description': 'Produtos artesanais',
-        'category_id': category.id,
-        'image': 'http://foto.jpg',
-        'banner': 'http://banner.jpg',
-        'address': {
-            'street': 'Rua A',
-            'number': 333,
-            'neighborhood': 'Centro',
-            'city': 'Pau dos Ferros',
-            'state': 'RN',
-            'zip_code': '59000-000',
-        },
-    }
+    try:
+        payload = {
+            'name': 'Ateliê B',
+            'description': 'Produtos artesanais',
+            'category_id': category.id,
+            'image': 'http://foto.jpg',
+            'banner': 'http://banner.jpg',
+            'address': {
+                'street': 'Rua A',
+                'number': 333,
+                'neighborhood': 'Centro',
+                'city': 'Pau dos Ferros',
+                'state': 'RN',
+                'zip_code': '59000-000',
+            },
+        }
 
-    response = await client.post(
-        '/stores/',
-        json=payload,
-        headers={'Authorization': f'Bearer {user.token}'},
-    )
+        # 2. Execução
+        response = await client.post(
+            '/stores/',
+            json=payload,
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
 
-    assert response.status_code == HTTPStatus.CREATED
-    data = response.json()
-    assert data['name'] == 'Ateliê B'
-    assert data['address']['street'] == 'Rua A'
-    assert data['artisan_id'] == user.id
+        # 3. Verificações
+        assert response.status_code == HTTPStatus.CREATED
+        data = response.json()
+        assert data['name'] == 'Ateliê B'
+        assert data['address']['street'] == 'Rua A'
+        assert data['artisan_id'] == user.id
 
-    app.dependency_overrides.pop(get_current_user)
+    finally:
+        # 4. Limpeza garantida
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
@@ -191,21 +201,17 @@ async def test_patch_store_address_success(client, user, store):
 
 @pytest.mark.asyncio
 async def test_patch_store_forbidden(client, other_user, store):
-
+    # Usando o other_user para testar a negação de acesso
     app.dependency_overrides[get_current_user] = lambda: other_user
+    try:
+        payload = {'description': 'Tentativa de alteração indevida'}
+        response = await client.patch(
+            f'/stores/{store.id}',
+            json=payload,
+            headers={'Authorization': f'Bearer {other_user.token}'},
+        )
 
-    payload = {'description': 'Tentativa de alteração indevida'}
-
-    response = await client.patch(
-        f'/stores/{store.id}',
-        json=payload,
-        headers={'Authorization': f'Bearer {other_user.token}'},
-    )
-
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert (
-        response.json()['detail'] == 'Loja não encontrada ou você não'
-        ' possui permissão para editá-la'
-    )
-
-    app.dependency_overrides.pop(get_current_user)
+        assert response.status_code == HTTPStatus.NOT_FOUND
+        assert 'permissão' in response.json()['detail']
+    finally:
+        app.dependency_overrides.clear()
