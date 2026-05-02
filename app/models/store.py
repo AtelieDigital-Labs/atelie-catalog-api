@@ -5,12 +5,9 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_as_dataclass,
     mapped_column,
-    registry,
     relationship,
 )
-
-# Cria a instância do registro
-table_registry = registry()
+from app.models.base import table_registry
 
 
 @mapped_as_dataclass(table_registry)
