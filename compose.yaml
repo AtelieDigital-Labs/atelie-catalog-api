@@ -23,6 +23,8 @@ services:
     image: atelie_catalog_api
     ports:
       - "8008:8000"
+    volumes:
+      - .:/app
     depends_on:
       catalog_database:
         condition: service_healthy
@@ -31,6 +33,7 @@ services:
     # Carrega as outras variáveis (como SECRET_KEY) do .env
     env_file:
       - .env
+    
 
 volumes:
   pgdata:
