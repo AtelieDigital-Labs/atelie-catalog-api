@@ -15,7 +15,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
     ports:
-      - "5434:5432"
+      - "5435:5432"
 
   catalog_api:
     build: .
