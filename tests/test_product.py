@@ -5,6 +5,36 @@ import pytest
 from app.core.security import get_current_user
 from app.main import app
 
+# helpers
+
+
+def make_variation(**kwargs):
+    base = {
+        'price': 10,
+        'weight': 1,
+        'length': 1,
+        'width': 1,
+        'height': 1,
+        'stock': 1,
+        'images': [],
+    }
+    base.update(kwargs)
+    return base
+
+
+def make_product(store_id, **kwargs):
+    base = {
+        'name': 'Produto Teste',
+        'description': 'descrição teste',
+        'store_id': store_id,
+        'variations': [make_variation()],
+    }
+    base.update(kwargs)
+    return base
+
+
+# POST /products/
+
 
 @pytest.mark.asyncio
 async def test_create_product_success(client, user, store):
@@ -13,27 +43,27 @@ async def test_create_product_success(client, user, store):
     try:
         EXPECTED_PRICE = 10.5
 
-        payload = {
-            'name': 'Produto Teste',
-            'description': 'Descrição teste',
-            'store_id': store.id,
-            'variations': [
-                {
-                    'price': EXPECTED_PRICE,
-                    'weight': 1.0,
-                    'length': 10,
-                    'width': 5,
-                    'height': 2,
-                    'sku': 'SKU123',
-                    'stock': 10,
-                    'color': 'Azul',
-                    'size': 'M',
-                    'images': [
+        payload = make_product(
+            store.id,
+            name='Produto Teste',
+            description='Descrição teste',
+            variations=[
+                make_variation(
+                    price=EXPECTED_PRICE,
+                    weight=1.0,
+                    length=10,
+                    width=5,
+                    height=2,
+                    sku='SKU123',
+                    stock=10,
+                    color='Azul',
+                    size='M',
+                    images=[
                         {'url': 'http://img.com/1.jpg', 'is_primary': True}
                     ],
-                }
+                )
             ],
-        }
+        )
 
         response = await client.post(
             '/products/',
@@ -70,22 +100,7 @@ async def test_create_product_store_not_found(client, user):
     try:
         response = await client.post(
             '/products/',
-            json={
-                'name': 'Produto inválido',
-                'description': 'teste',
-                'store_id': 999,
-                'variations': [
-                    {
-                        'price': 10,
-                        'weight': 1,
-                        'length': 1,
-                        'width': 1,
-                        'height': 1,
-                        'stock': 1,
-                        'images': [],
-                    }
-                ],
-            },
+            json=make_product(store_id=999),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -102,28 +117,12 @@ async def test_create_product_store_not_found(client, user):
 async def test_create_product_store_belongs_to_another_user(
     client, user, other_user, store
 ):
-    # store pertence ao `user`, `another_user` não pode criar produto nela
     app.dependency_overrides[get_current_user] = lambda: other_user
 
     try:
         response = await client.post(
             '/products/',
-            json={
-                'name': 'Produto invasor',
-                'description': 'teste',
-                'store_id': store.id,
-                'variations': [
-                    {
-                        'price': 10,
-                        'weight': 1,
-                        'length': 1,
-                        'width': 1,
-                        'height': 1,
-                        'stock': 1,
-                        'images': [],
-                    }
-                ],
-            },
+            json=make_product(store.id),
             headers={'Authorization': f'Bearer {other_user.token}'},
         )
 
@@ -140,12 +139,7 @@ async def test_create_product_without_variations(client, user, store):
     try:
         response = await client.post(
             '/products/',
-            json={
-                'name': 'Produto sem variação',
-                'description': 'teste',
-                'store_id': store.id,
-                'variations': [],
-            },
+            json=make_product(store.id, variations=[]),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -163,12 +157,27 @@ async def test_create_product_name_too_short(client, user, store):
     try:
         response = await client.post(
             '/products/',
-            json={
-                'name': 'AB',  # min_length=3
-                'description': 'teste',
-                'store_id': store.id,
-                'variations': [],
-            },
+            json=make_product(store.id, name='AB'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_create_product_negative_price(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        response = await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                variations=[make_variation(price=-1)],
+            ),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -183,74 +192,20 @@ async def test_create_product_duplicate_sku(client, user, store):
     app.dependency_overrides[get_current_user] = lambda: user
 
     try:
-        payload = {
-            'name': 'Produto SKU Duplicado',
-            'description': 'teste',
-            'store_id': store.id,
-            'variations': [
-                {
-                    'price': 10,
-                    'weight': 1,
-                    'length': 1,
-                    'width': 1,
-                    'height': 1,
-                    'stock': 1,
-                    'sku': 'SKU-IGUAL',
-                    'images': [],
-                },
-                {
-                    'price': 20,
-                    'weight': 2,
-                    'length': 2,
-                    'width': 2,
-                    'height': 2,
-                    'stock': 2,
-                    'sku': 'SKU-IGUAL',
-                    'images': [],
-                },
-            ],
-        }
-
         response = await client.post(
             '/products/',
-            json=payload,
+            json=make_product(
+                store.id,
+                variations=[
+                    make_variation(sku='SKU-IGUAL'),
+                    make_variation(sku='SKU-IGUAL'),
+                ],
+            ),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
         assert response.status_code == HTTPStatus.CONFLICT
         assert response.json()['detail'] == 'SKU já cadastrado'
-
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
-async def test_create_product_negative_price(client, user, store):
-    app.dependency_overrides[get_current_user] = lambda: user
-
-    try:
-        response = await client.post(
-            '/products/',
-            json={
-                'name': 'Produto preço inválido',
-                'description': 'teste',
-                'store_id': store.id,
-                'variations': [
-                    {
-                        'price': -1,
-                        'weight': 1,
-                        'length': 1,
-                        'width': 1,
-                        'height': 1,
-                        'stock': 1,
-                        'images': [],
-                    }
-                ],
-            },
-            headers={'Authorization': f'Bearer {user.token}'},
-        )
-
-        assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
     finally:
         app.dependency_overrides.clear()
