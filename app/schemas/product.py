@@ -15,8 +15,10 @@ class ProductImageSchema(BaseModel):
     )
 
 
-class ProductImagePublic(ProductImageSchema):
+class ProductImagePublic(BaseModel):
     id: int
+    url: str
+    is_primary: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,9 +61,19 @@ class ProductVariationSchema(BaseModel):
     )
 
 
-class ProductVariationPublic(ProductVariationSchema):
+class ProductVariationPublic(BaseModel):
     id: int
+    price: Decimal
+    weight: float
+    length: float
+    width: float
+    height: float
+    sku: Optional[str] = None
+    stock: int
+    color: Optional[str] = None
+    size: Optional[str] = None
     images: List[ProductImagePublic]
+
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer('price')
