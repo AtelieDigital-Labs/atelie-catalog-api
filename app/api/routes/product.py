@@ -12,6 +12,8 @@ from app.core.security import CurrentUser
 from app.models.product import Product, ProductImage, ProductVariation
 from app.models.store import Store
 from app.schemas.product import (
+    FilterProduct,
+    ProductList,
     ProductPublic,
     ProductSchema,
 )
@@ -60,7 +62,7 @@ async def create_product(
             )
 
             session.add(db_variation)
-            await session.flush()  
+            await session.flush()
 
             for image_data in variation_data.images:
                 db_image = ProductImage(
@@ -88,3 +90,26 @@ async def create_product(
     )
 
     return result.unique().scalar_one()
+
+
+@router.get('/', response_model=ProductList)
+async def list_products(
+    session: Session,
+    filters: Annotated[FilterProduct, Depends()],
+):
+    query = select(Product).options(
+        joinedload(Product.variations).joinedload(ProductVariation.images)
+    )
+
+    if filters.name:
+        query = query.where(Product.name.ilike(f'%{filters.name}%'))
+
+    if filters.store_id:
+        query = query.where(Product.store_id == filters.store_id)
+
+    query = query.limit(filters.limit).offset(filters.offset)
+
+    result = await session.execute(query)
+    products = result.unique().scalars().all()
+
+    return {'products': products}

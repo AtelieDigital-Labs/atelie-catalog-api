@@ -209,3 +209,135 @@ async def test_create_product_duplicate_sku(client, user, store):
 
     finally:
         app.dependency_overrides.clear()
+
+
+# GET /products/
+
+
+@pytest.mark.asyncio
+async def test_list_products_empty(client):
+    response = await client.get('/products/')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {'products': []}
+
+
+@pytest.mark.asyncio
+async def test_list_products_success(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 2
+
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Um'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Dois'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_by_name(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 2
+
+        for name in ['Camiseta Azul', 'Camiseta Verde', 'Calça Preta']:
+            await client.post(
+                '/products/',
+                json=make_product(store.id, name=name),
+                headers={'Authorization': f'Bearer {user.token}'},
+            )
+
+        response = await client.get('/products/?name=Camiseta')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+        assert all('Camiseta' in p['name'] for p in data['products'])
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_by_store(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto da Loja'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get(f'/products/?store_id={store.id}')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == 1
+        assert data['products'][0]['name'] == 'Produto da Loja'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_name_too_short(client):
+    response = await client.get('/products/?name=AB')
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+async def test_list_products_pagination(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        TOTAL_PRODUCTS = 5
+        PAGE_SIZE = 2
+
+        for i in range(TOTAL_PRODUCTS):
+            await client.post(
+                '/products/',
+                json=make_product(store.id, name=f'Produto {i}'),
+                headers={'Authorization': f'Bearer {user.token}'},
+            )
+
+        response_p1 = await client.get(
+            f'/products/?limit={PAGE_SIZE}&offset=0'
+        )
+
+        response_p2 = await client.get(
+            f'/products/?limit={PAGE_SIZE}&offset={PAGE_SIZE}'
+        )
+
+        assert response_p1.status_code == HTTPStatus.OK
+        assert response_p2.status_code == HTTPStatus.OK
+
+        assert len(response_p1.json()['products']) == PAGE_SIZE
+        assert len(response_p2.json()['products']) == PAGE_SIZE
+
+        ids_p1 = {p['id'] for p in response_p1.json()['products']}
+        ids_p2 = {p['id'] for p in response_p2.json()['products']}
+        assert ids_p1.isdisjoint(ids_p2)
+    finally:
+        app.dependency_overrides.clear()
