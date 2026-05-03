@@ -89,7 +89,7 @@ class ProductPublic(BaseModel):
     id: int
     name: str
     description: str
-    store_id: int 
+    store_id: int
     is_active: bool
 
     variations: List[ProductVariationPublic]

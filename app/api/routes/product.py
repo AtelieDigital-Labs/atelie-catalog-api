@@ -113,3 +113,25 @@ async def list_products(
     products = result.unique().scalars().all()
 
     return {'products': products}
+
+
+@router.get('/{product_id}', response_model=ProductPublic)
+async def get_product(product_id: int, session: Session):
+    query = (
+        select(Product)
+        .where(Product.id == product_id)
+        .options(
+            joinedload(Product.variations).joinedload(ProductVariation.images)
+        )
+    )
+
+    result = await session.execute(query)
+    product = result.unique().scalar_one_or_none()
+
+    if not product:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Product not found',
+        )
+
+    return product
