@@ -7,6 +7,7 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
+
 from app.models.base import table_registry
 
 
