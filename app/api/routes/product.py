@@ -278,3 +278,29 @@ async def update_product(
     )
 
     return result.unique().scalar_one()
+
+
+@router.delete('/{product_id}', status_code=HTTPStatus.NO_CONTENT)
+async def delete_product(
+    product_id: int,
+    user: CurrentUser,
+    session: Session,
+):
+    product = await session.get(Product, product_id)
+
+    if not product:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Product not found',
+        )
+
+    store = await session.get(Store, product.store_id)
+
+    if not store or store.artisan_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Not enough permissions',
+        )
+
+    await session.delete(product)
+    await session.commit()
