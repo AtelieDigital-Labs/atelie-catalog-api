@@ -129,7 +129,7 @@ async def get_product(product_id: int, session: Session):
     result = await session.execute(query)
     product = result.unique().scalar_one_or_none()
 
-    if not product:
+    if not product or not product.is_active:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
             detail='Product not found',
