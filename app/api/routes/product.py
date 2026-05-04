@@ -16,6 +16,7 @@ from app.schemas.product import (
     ProductList,
     ProductPublic,
     ProductSchema,
+    ProductUpdate,
 )
 
 router = APIRouter(prefix='/products', tags=['products'])
@@ -135,3 +136,145 @@ async def get_product(product_id: int, session: Session):
         )
 
     return product
+
+
+# app/api/routes/product.py
+
+
+def _update_image(
+    db_variation: ProductVariation,
+    img_data: dict,
+) -> None:
+    existing_images = {img.id: img for img in db_variation.images}
+    img_id = img_data.get('id')
+
+    if img_id and img_id in existing_images:
+        img = existing_images[img_id]
+        img.url = img_data.get('url', img.url)
+        img.is_primary = img_data.get('is_primary', img.is_primary)
+    else:
+        db_variation.images.append(
+            ProductImage(
+                url=img_data['url'],
+                is_primary=img_data.get('is_primary', False),
+                variation_id=db_variation.id,
+            )
+        )
+
+
+def _build_variation(
+    product_id: int,
+    var_data: dict,
+) -> ProductVariation:
+    new_variation = ProductVariation(
+        product_id=product_id,
+        price=var_data['price'],
+        weight=var_data['weight'],
+        length=var_data['length'],
+        width=var_data['width'],
+        height=var_data['height'],
+        stock=var_data['stock'],
+        sku=var_data.get('sku'),
+        color=var_data.get('color'),
+        size=var_data.get('size'),
+    )
+
+    new_variation.images = [
+        ProductImage(
+            url=img['url'],
+            is_primary=img.get('is_primary', False),
+            variation_id=None,
+        )
+        for img in var_data.get('images', [])
+    ]
+
+    return new_variation
+
+
+def _process_variations(
+    db_product: Product,
+    variations_data: list,
+) -> list:
+    existing_variations = {v.id: v for v in db_product.variations}
+    new_variations = []
+
+    for var_data in variations_data:
+        var_id = var_data.get('id')
+
+        if var_id and var_id in existing_variations:
+            db_variation = existing_variations[var_id]
+
+            for key, value in var_data.items():
+                if key not in {'id', 'images'}:
+                    setattr(db_variation, key, value)
+
+            for img_data in var_data.get('images', []):
+                _update_image(db_variation, img_data)
+
+            new_variations.append(db_variation)
+        else:
+            new_variations.append(_build_variation(db_product.id, var_data))
+
+    return new_variations
+
+
+@router.patch('/{product_id}', response_model=ProductPublic)
+async def update_product(
+    product_id: int,
+    payload: ProductUpdate,
+    user: CurrentUser,
+    session: Session,
+):
+    result = await session.execute(
+        select(Product)
+        .where(Product.id == product_id)
+        .options(
+            joinedload(Product.variations).joinedload(ProductVariation.images)
+        )
+    )
+
+    db_product = result.unique().scalar_one_or_none()
+
+    if not db_product:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Product not found',
+        )
+
+    store = await session.get(Store, db_product.store_id)
+
+    if not store or store.artisan_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Not enough permissions',
+        )
+
+    data = payload.model_dump(exclude_unset=True)
+
+    for key, value in data.items():
+        if key != 'variations':
+            setattr(db_product, key, value)
+
+    if 'variations' in data:
+        db_product.variations = _process_variations(
+            db_product, data['variations']
+        )
+
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail='SKU already exists',
+        )
+
+    result = await session.execute(
+        select(Product)
+        .where(Product.id == product_id)
+        .options(
+            joinedload(Product.variations).joinedload(ProductVariation.images)
+        )
+    )
+
+    return result.unique().scalar_one()
