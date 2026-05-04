@@ -1,12 +1,12 @@
 from decimal import Decimal
-from typing import Optional, List
+from typing import List, Optional
 
-from sqlalchemy import ForeignKey, String, Numeric, Boolean
+from sqlalchemy import Boolean, ForeignKey, Numeric, String
 from sqlalchemy.orm import (
     Mapped,
+    mapped_as_dataclass,
     mapped_column,
     relationship,
-    mapped_as_dataclass,
 )
 
 from app.models.base import table_registry
