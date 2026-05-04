@@ -27,11 +27,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-- após o primeiro build
-```bash
-docker compose up
-```
-- A API estará disponível em http://localhost:8000.
+- A API estará disponível em http://localhost:8008.
 
 **3. Executar Localmente (Desenvolvimento)**
 - Se preferir rodar apenas o banco no Docker e a API no seu terminal:
