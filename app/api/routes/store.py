@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 
 from app.core.database import get_session
 from app.core.security import CurrentUser
+from app.models.product import Product, ProductVariation
 from app.models.store import Address, Store, StoreCategory
 from app.schemas.store import (
     CategoryList,
@@ -18,9 +19,8 @@ from app.schemas.store import (
     StorePublic,
     StoreSchema,
     StoreUpdate,
-    StoreWithProductsPublic
+    StoreWithProductsPublic,
 )
-from app.models.product import Product, ProductVariation
 
 router = APIRouter(prefix='/stores', tags=['stores'])
 
@@ -204,7 +204,6 @@ async def update_category(
     return db_category
 
 
-
 @router.get('/{store_id}', response_model=StoreWithProductsPublic)
 async def get_store(store_id: int, session: Session):
     query = (
@@ -229,7 +228,7 @@ async def get_store(store_id: int, session: Session):
         select(Product)
         .where(
             Product.store_id == store_id,
-            Product.is_active == True,
+            Product.is_active,
         )
         .options(
             joinedload(Product.variations).joinedload(ProductVariation.images)
@@ -241,9 +240,7 @@ async def get_store(store_id: int, session: Session):
 
     active_products = []
     for product in products:
-        active_variations = [
-            v for v in product.variations if v.stock > 0
-        ]
+        active_variations = [v for v in product.variations if v.stock > 0]
         if active_variations:
             product.variations = active_variations
             active_products.append(product)

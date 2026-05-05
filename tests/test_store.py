@@ -4,6 +4,7 @@ import pytest
 
 from app.core.security import get_current_user
 from app.main import app
+from tests.test_product import make_product, make_variation
 
 
 @pytest.mark.asyncio
@@ -15,9 +16,6 @@ async def test_categories_flow(client, user):
         response = await client.post(
             '/stores/categories',
             json={'name': 'Crochê'},
-            # Note: Como você já deu override no get_current_user,
-            # o token no header pode ser qualquer coisa, o FastAPI vai ignorar
-            # a validação do JWT e retornar o seu 'user' fake.
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -215,3 +213,122 @@ async def test_patch_store_forbidden(client, other_user, store):
         assert 'permissão' in response.json()['detail']
     finally:
         app.dependency_overrides.clear()
+
+
+# GET /stores/{id}
+
+
+@pytest.mark.asyncio
+async def test_get_store_success(client, store):
+    response = await client.get(f'/stores/{store.id}')
+
+    assert response.status_code == HTTPStatus.OK
+
+    data = response.json()
+    assert data['id'] == store.id
+    assert data['name'] == store.name
+    assert data['category'] is not None
+    assert data['address'] is not None
+
+
+@pytest.mark.asyncio
+async def test_get_store_not_found(client):
+    response = await client.get('/stores/999')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json()['detail'] == 'Store not found'
+
+
+@pytest.mark.asyncio
+async def test_get_store_returns_only_active_products(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Ativo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        create_response = await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Inativo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert create_response.status_code == HTTPStatus.CREATED
+        product_id = create_response.json()['id']
+
+        await client.patch(
+            f'/products/{product_id}',
+            json={'is_active': False},
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get(f'/stores/{store.id}')
+
+        assert response.status_code == HTTPStatus.OK
+
+        products = response.json()['products']
+        assert len(products) == EXPECTED_COUNT
+        assert products[0]['name'] == 'Produto Ativo'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_store_returns_only_products_with_stock(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Com Estoque',
+                variations=[make_variation(stock=10)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Sem Estoque',
+                variations=[make_variation(stock=0)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get(f'/stores/{store.id}')
+
+        assert response.status_code == HTTPStatus.OK
+
+        products = response.json()['products']
+        assert len(products) == EXPECTED_COUNT
+        assert products[0]['name'] == 'Produto Com Estoque'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_store_does_not_require_auth(client, store):
+
+    response = await client.get(f'/stores/{store.id}')
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_get_store_empty_products(client, store):
+
+    response = await client.get(f'/stores/{store.id}')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()['products'] == []

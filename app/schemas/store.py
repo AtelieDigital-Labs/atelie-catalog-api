@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
 from app.schemas.product import ProductPublic
+
 
 class Message(BaseModel):
     message: str
@@ -21,8 +23,7 @@ class AddressSchema(BaseModel):
 class AddressPublic(AddressSchema):
     id: int
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategorySchema(BaseModel):
@@ -60,8 +61,7 @@ class StorePublic(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StoreList(BaseModel):
