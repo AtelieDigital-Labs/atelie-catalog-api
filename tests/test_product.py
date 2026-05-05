@@ -466,6 +466,36 @@ async def test_get_product_does_not_require_auth(client, user, store):
     assert response.status_code == HTTPStatus.OK
 
 
+@pytest.mark.asyncio
+async def test_get_inactive_product_returns_404(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        create_response = await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Inativo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert create_response.status_code == HTTPStatus.CREATED
+        product_id = create_response.json()['id']
+
+        patch_response = await client.patch(
+            f'/products/{product_id}',
+            json={'is_active': False},
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert patch_response.status_code == HTTPStatus.OK
+        assert patch_response.json()['is_active'] is False
+
+        response = await client.get(f'/products/{product_id}')
+        assert response.status_code == HTTPStatus.NOT_FOUND
+
+    finally:
+        app.dependency_overrides.clear()
+
+
 # PATCH /products/{id}
 
 

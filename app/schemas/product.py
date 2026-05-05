@@ -137,6 +137,7 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     variations: Optional[List[VariationUpdate]] = None
+    is_active: Optional[bool] = None
 
 
 class FilterProduct(BaseModel):
