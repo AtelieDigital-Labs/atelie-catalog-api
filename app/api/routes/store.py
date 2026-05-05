@@ -18,7 +18,9 @@ from app.schemas.store import (
     StorePublic,
     StoreSchema,
     StoreUpdate,
+    StoreWithProductsPublic
 )
+from app.models.product import Product, ProductVariation
 
 router = APIRouter(prefix='/stores', tags=['stores'])
 
@@ -200,3 +202,62 @@ async def update_category(
     await session.refresh(db_category)
 
     return db_category
+
+
+
+@router.get('/{store_id}', response_model=StoreWithProductsPublic)
+async def get_store(store_id: int, session: Session):
+    query = (
+        select(Store)
+        .where(Store.id == store_id)
+        .options(
+            joinedload(Store.category),
+            joinedload(Store.address),
+        )
+    )
+
+    result = await session.execute(query)
+    store = result.scalar_one_or_none()
+
+    if not store:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Store not found',
+        )
+
+    products_query = (
+        select(Product)
+        .where(
+            Product.store_id == store_id,
+            Product.is_active == True,
+        )
+        .options(
+            joinedload(Product.variations).joinedload(ProductVariation.images)
+        )
+    )
+
+    products_result = await session.execute(products_query)
+    products = products_result.unique().scalars().all()
+
+    active_products = []
+    for product in products:
+        active_variations = [
+            v for v in product.variations if v.stock > 0
+        ]
+        if active_variations:
+            product.variations = active_variations
+            active_products.append(product)
+
+    return StoreWithProductsPublic(
+        id=store.id,
+        artisan_id=store.artisan_id,
+        name=store.name,
+        description=store.description,
+        category=store.category,
+        image=store.image,
+        banner=store.banner,
+        address=store.address,
+        created_at=store.created_at,
+        updated_at=store.updated_at,
+        products=active_products,
+    )
