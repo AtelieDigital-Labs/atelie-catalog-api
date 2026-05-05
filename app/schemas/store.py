@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.product import ProductPublic
+
 
 class Message(BaseModel):
     message: str
@@ -21,8 +23,7 @@ class AddressSchema(BaseModel):
 class AddressPublic(AddressSchema):
     id: int
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CategorySchema(BaseModel):
@@ -60,8 +61,7 @@ class StorePublic(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class ConfigDict:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StoreList(BaseModel):
@@ -97,3 +97,19 @@ class FilterPage(BaseModel):
 class FilterStore(FilterPage):
     name: str | None = Field(default=None, min_length=3)
     category_id: int | None = Field(default=None)
+
+
+class StoreWithProductsPublic(BaseModel):
+    id: int
+    artisan_id: str
+    name: str
+    description: str | None
+    category: CategoryPublic
+    image: str | None = None
+    banner: str | None = None
+    address: Optional[AddressPublic] = None
+    created_at: datetime
+    updated_at: datetime
+    products: list[ProductPublic] = []
+
+    model_config = ConfigDict(from_attributes=True)
