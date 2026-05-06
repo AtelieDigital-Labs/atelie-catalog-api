@@ -2,7 +2,7 @@ from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import asc,select,func
+from sqlalchemy import asc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -93,7 +93,6 @@ async def create_product(
     return result.unique().scalar_one()
 
 
-
 @router.get('/', response_model=ProductList)
 async def list_products(
     session: Session,
@@ -117,16 +116,12 @@ async def list_products(
 
     if filters.min_price:
         query = query.where(
-            Product.variations.any(
-                ProductVariation.price >= filters.min_price
-            )
+            Product.variations.any(ProductVariation.price >= filters.min_price)
         )
 
     if filters.max_price:
         query = query.where(
-            Product.variations.any(
-                ProductVariation.price <= filters.max_price
-            )
+            Product.variations.any(ProductVariation.price <= filters.max_price)
         )
 
     if filters.sort == 'price_asc':
@@ -176,7 +171,6 @@ async def get_product(product_id: int, session: Session):
         )
 
     return product
-
 
 
 def _update_image(
@@ -342,6 +336,3 @@ async def delete_product(
 
     await session.delete(product)
     await session.commit()
-
-
-

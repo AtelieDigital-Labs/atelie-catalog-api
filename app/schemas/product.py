@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import List, Optional, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
@@ -146,6 +146,6 @@ class FilterProduct(BaseModel):
 
     q: Optional[str] = Field(default=None, min_length=3)
     category_id: Optional[int] = None
-    min_price: Optional[float] = Field(default=None,gt=0)
-    max_price: Optional[float] = Field(default=None,gt=0)
+    min_price: Optional[float] = Field(default=None, gt=0)
+    max_price: Optional[float] = Field(default=None, gt=0)
     sort: Optional[Literal['price_asc', 'newest']] = None
