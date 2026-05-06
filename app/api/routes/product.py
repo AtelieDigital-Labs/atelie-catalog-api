@@ -2,7 +2,7 @@ from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import asc,select,func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -93,20 +93,60 @@ async def create_product(
     return result.unique().scalar_one()
 
 
+
 @router.get('/', response_model=ProductList)
 async def list_products(
     session: Session,
     filters: Annotated[FilterProduct, Depends()],
 ):
-    query = select(Product).options(
-        joinedload(Product.variations).joinedload(ProductVariation.images)
+    query = (
+        select(Product)
+        .where(Product.is_active)
+        .options(
+            joinedload(Product.variations).joinedload(ProductVariation.images)
+        )
     )
 
-    if filters.name:
-        query = query.where(Product.name.ilike(f'%{filters.name}%'))
+    if filters.q:
+        query = query.where(Product.name.ilike(f'%{filters.q}%'))
 
-    if filters.store_id:
-        query = query.where(Product.store_id == filters.store_id)
+    if filters.category_id:
+        query = query.join(Store).where(
+            Store.category_id == filters.category_id
+        )
+
+    if filters.min_price:
+        query = query.where(
+            Product.variations.any(
+                ProductVariation.price >= filters.min_price
+            )
+        )
+
+    if filters.max_price:
+        query = query.where(
+            Product.variations.any(
+                ProductVariation.price <= filters.max_price
+            )
+        )
+
+    if filters.sort == 'price_asc':
+        # subquery para pegar o menor preço de cada produto
+        min_price_subquery = (
+            select(
+                ProductVariation.product_id,
+                func.min(ProductVariation.price).label('min_price'),
+            )
+            .group_by(ProductVariation.product_id)
+            .subquery()
+        )
+
+        query = query.outerjoin(
+            min_price_subquery,
+            Product.id == min_price_subquery.c.product_id,
+        ).order_by(asc(min_price_subquery.c.min_price))
+
+    elif filters.sort == 'newest':
+        query = query.order_by(Product.id.desc())
 
     query = query.limit(filters.limit).offset(filters.offset)
 
@@ -137,8 +177,6 @@ async def get_product(product_id: int, session: Session):
 
     return product
 
-
-# app/api/routes/product.py
 
 
 def _update_image(
@@ -304,3 +342,6 @@ async def delete_product(
 
     await session.delete(product)
     await session.commit()
+
+
+
