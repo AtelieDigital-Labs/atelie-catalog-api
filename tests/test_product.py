@@ -252,7 +252,7 @@ async def test_list_products_success(client, user, store):
 
 
 @pytest.mark.asyncio
-async def test_list_products_filter_by_name(client, user, store):
+async def test_list_products_filter_by_q(client, user, store):
     app.dependency_overrides[get_current_user] = lambda: user
 
     try:
@@ -265,7 +265,7 @@ async def test_list_products_filter_by_name(client, user, store):
                 headers={'Authorization': f'Bearer {user.token}'},
             )
 
-        response = await client.get('/products/?name=Camiseta')
+        response = await client.get('/products/?q=Camiseta')
 
         assert response.status_code == HTTPStatus.OK
 
@@ -302,9 +302,317 @@ async def test_list_products_filter_by_store(client, user, store):
 
 @pytest.mark.asyncio
 async def test_list_products_filter_name_too_short(client):
-    response = await client.get('/products/?name=AB')
+    response = await client.get('/products/?q=AB')
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+async def test_list_products_only_active(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Ativo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        create_response = await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Inativo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert create_response.status_code == HTTPStatus.CREATED
+        product_id = create_response.json()['id']
+
+        await client.patch(
+            f'/products/{product_id}',
+            json={'is_active': False},
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/')
+
+        assert response.status_code == HTTPStatus.OK
+        assert len(response.json()['products']) == EXPECTED_COUNT
+        assert response.json()['products'][0]['name'] == 'Produto Ativo'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_by_min_price(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Barato',
+                variations=[make_variation(price=30)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Caro',
+                variations=[make_variation(price=200)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/?min_price=100')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+        assert data['products'][0]['name'] == 'Produto Caro'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_by_max_price(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Barato',
+                variations=[make_variation(price=50)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Caro',
+                variations=[make_variation(price=200)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/?max_price=100')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+        assert data['products'][0]['name'] == 'Produto Barato'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_by_price_range(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Barato',
+                variations=[make_variation(price=30)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Medio',
+                variations=[make_variation(price=100)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Caro',
+                variations=[make_variation(price=200)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/?min_price=50&max_price=150')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+        assert data['products'][0]['name'] == 'Produto Medio'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_by_category(client, user, store, category):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto da Categoria'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get(f'/products/?category_id={category.id}')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+        assert data['products'][0]['name'] == 'Produto da Categoria'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_filter_combined(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        EXPECTED_COUNT = 1
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Camiseta Barata',
+                variations=[make_variation(price=50)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Camiseta Cara',
+                variations=[make_variation(price=200)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Calça Barata',
+                variations=[make_variation(price=50)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/?q=Camiseta&max_price=100')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['products']) == EXPECTED_COUNT
+        assert data['products'][0]['name'] == 'Camiseta Barata'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_sort_by_price_asc(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Caro',
+                variations=[make_variation(price=200)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(
+                store.id,
+                name='Produto Barato',
+                variations=[make_variation(price=30)],
+            ),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/?sort=price_asc')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        prices = [
+            p['variations'][0]['price']
+            for p in data['products']
+            if p['variations']
+        ]
+        assert prices == sorted(prices)
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_products_sort_by_newest(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Antigo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        await client.post(
+            '/products/',
+            json=make_product(store.id, name='Produto Novo'),
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        response = await client.get('/products/?sort=newest')
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert data['products'][0]['name'] == 'Produto Novo'
+
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
