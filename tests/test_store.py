@@ -4,7 +4,10 @@ import pytest
 
 from app.core.security import get_current_user
 from app.main import app
-from tests.test_product import make_product, make_variation
+from tests.test_product.conftest import (
+    make_product,
+    make_variation,
+)
 
 
 @pytest.mark.asyncio
