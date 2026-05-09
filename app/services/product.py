@@ -6,11 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.store import Store
 from app.repositories.product import ProductRepository
-from app.schemas.product import FilterProduct, ProductList, ProductSchema, ProductUpdate
+from app.schemas.product import (
+    FilterProduct,
+    ProductList,
+    ProductSchema,
+    ProductUpdate,
+)
 
 
 class ProductService:
-
     @staticmethod
     async def create(
         session: AsyncSession,

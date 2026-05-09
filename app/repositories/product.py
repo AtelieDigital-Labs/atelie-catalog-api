@@ -1,7 +1,4 @@
-from decimal import Decimal
-
 from sqlalchemy import asc, func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -11,7 +8,6 @@ from app.schemas.product import FilterProduct
 
 
 class ProductRepository:
-
     @staticmethod
     async def get_by_id(
         session: AsyncSession,
