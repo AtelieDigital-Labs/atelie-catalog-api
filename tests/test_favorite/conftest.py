@@ -1,0 +1,19 @@
+from tests.test_product.conftest import make_product
+
+
+async def create_and_favorite(client, user, store):
+    """Helper — cria produto e favorita em um passo."""
+    create_response = await client.post(
+        '/products/',
+        json=make_product(store.id),
+        headers={'Authorization': f'Bearer {user.token}'},
+    )
+
+    product_id = create_response.json()['id']
+
+    await client.post(
+        f'/favorites/{product_id}',
+        headers={'Authorization': f'Bearer {user.token}'},
+    )
+
+    return product_id
