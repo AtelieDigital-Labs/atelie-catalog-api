@@ -18,7 +18,6 @@ from app.schemas.store import (
 
 
 class CategoryService:
-
     @staticmethod
     async def create(
         session: AsyncSession,
@@ -68,7 +67,6 @@ class CategoryService:
 
 
 class StoreService:
-
     @staticmethod
     async def create(
         session: AsyncSession,
@@ -110,7 +108,8 @@ class StoreService:
         if not db_store:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
-                detail='Loja não encontrada ou você não possui permissão para editá-la',
+                detail='Loja não encontrada ou você não possui '
+                'permissão para editá-la',
             )
 
         update_data = payload.model_dump(exclude_unset=True, exclude_none=True)

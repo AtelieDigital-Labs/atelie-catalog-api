@@ -4,11 +4,9 @@ from sqlalchemy.orm import joinedload
 
 from app.models.product import Product, ProductVariation
 from app.models.store import Address, Store, StoreCategory
-from app.schemas.store import StoreWithProductsPublic
 
 
 class CategoryRepository:
-
     @staticmethod
     async def get_by_name(
         session: AsyncSession,
@@ -58,7 +56,6 @@ class CategoryRepository:
 
 
 class StoreRepository:
-
     @staticmethod
     async def get_by_id(
         session: AsyncSession,
