@@ -12,6 +12,7 @@ from app.models.store import table_registry
 from app.models.store import Store, StoreCategory
 from app.models.product import ProductImage, Product, ProductVariation
 from app.models.favorite import Favorite
+from app.models.review import Review
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
