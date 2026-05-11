@@ -5,9 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.orders import OrdersClient
 from app.models.product import Product
-from app.repositories.review import ReviewRepository
-from app.schemas.review import ReviewList, ReviewPublic, ReviewSchema, ReviewUpdate
 from app.models.review import Review
+from app.repositories.review import ReviewRepository
+from app.schemas.review import (
+    ReviewList,
+    ReviewPublic,
+    ReviewSchema,
+    ReviewUpdate,
+)
+
 
 class ReviewService:
     @staticmethod
@@ -94,7 +100,6 @@ class ReviewService:
             )
 
         await ReviewRepository.delete(session, review)
-
 
     @staticmethod
     async def update(
