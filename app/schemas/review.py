@@ -24,3 +24,8 @@ class ReviewList(BaseModel):
     reviews: list[ReviewPublic]
     total: int
     average_rating: float
+
+
+class ReviewUpdate(BaseModel):
+    rating: int | None = Field(default=None, ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=500)

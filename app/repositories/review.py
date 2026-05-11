@@ -60,3 +60,22 @@ class ReviewRepository:
         await session.commit()
         await session.refresh(review)
         return review
+
+    @staticmethod
+    async def update(
+        session: AsyncSession,
+        review: Review,
+        data: dict,
+    ) -> Review:
+        for key, value in data.items():
+            setattr(review, key, value)
+
+        session.add(review)
+        await session.commit()
+        await session.refresh(review)
+        return review
+
+    @staticmethod
+    async def delete(session: AsyncSession, review: Review) -> None:
+        await session.delete(review)
+        await session.commit()

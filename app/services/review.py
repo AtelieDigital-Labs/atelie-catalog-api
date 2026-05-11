@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.integrations.orders import OrdersClient
 from app.models.product import Product
 from app.repositories.review import ReviewRepository
-from app.schemas.review import ReviewList, ReviewPublic, ReviewSchema
-
+from app.schemas.review import ReviewList, ReviewPublic, ReviewSchema, ReviewUpdate
+from app.models.review import Review
 
 class ReviewService:
     @staticmethod
@@ -76,3 +76,42 @@ class ReviewService:
             'total': len(reviews),
             'average_rating': average,
         }
+
+    @staticmethod
+    async def delete(
+        session: AsyncSession,
+        user_id: str,
+        product_id: int,
+    ) -> None:
+        review = await ReviewRepository.get_by_user_and_product(
+            session, user_id, product_id
+        )
+
+        if not review:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='Review not found',
+            )
+
+        await ReviewRepository.delete(session, review)
+
+
+    @staticmethod
+    async def update(
+        session: AsyncSession,
+        user_id: str,
+        product_id: int,
+        payload: ReviewUpdate,
+    ) -> Review:
+        review = await ReviewRepository.get_by_user_and_product(
+            session, user_id, product_id
+        )
+
+        if not review:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='Review not found',
+            )
+
+        data = payload.model_dump(exclude_unset=True)
+        return await ReviewRepository.update(session, review, data)
