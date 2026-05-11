@@ -22,4 +22,6 @@ class Review:
         ForeignKey('products.id', ondelete='CASCADE')
     )
     rating: Mapped[int] = mapped_column(Integer, nullable=False)
-    comment: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    comment: Mapped[str | None] = mapped_column(
+        Text, nullable=True, default=None
+    )

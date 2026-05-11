@@ -10,7 +10,6 @@ from app.schemas.review import ReviewList, ReviewPublic, ReviewSchema
 
 
 class ReviewService:
-
     @staticmethod
     async def create(
         session: AsyncSession,

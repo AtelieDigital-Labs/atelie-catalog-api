@@ -5,7 +5,6 @@ from app.models.review import Review
 
 
 class ReviewRepository:
-
     @staticmethod
     async def get_by_user_and_product(
         session: AsyncSession,
