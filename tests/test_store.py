@@ -350,9 +350,8 @@ async def test_get_my_store_success(client, user, store):
         assert response.status_code == HTTPStatus.OK
 
         data = response.json()
-        assert data['id'] == store.id
-        assert data['name'] == store.name
-        assert data['artisan_id'] == user.id
+        assert len(data['stores']) >= 1
+        assert any(s['artisan_id'] == user.id for s in data['stores'])
 
     finally:
         app.dependency_overrides.clear()

@@ -201,7 +201,7 @@ class StoreRepository:
     async def get_by_artisan_id(
         session: AsyncSession,
         artisan_id: str,
-    ) -> Store | None:
+    ) -> list[Store]:
         result = await session.execute(
             select(Store)
             .where(Store.artisan_id == artisan_id)
@@ -210,4 +210,4 @@ class StoreRepository:
                 joinedload(Store.address),
             )
         )
-        return result.scalar_one_or_none()
+        return list(result.scalars().all())
