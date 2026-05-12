@@ -145,3 +145,18 @@ class StoreService:
             updated_at=store.updated_at,
             products=active_products,
         )
+
+    @staticmethod
+    async def get_my_store(
+        session: AsyncSession,
+        user_id: str,
+    ) -> StorePublic:
+        store = await StoreRepository.get_by_artisan_id(session, user_id)
+
+        if not store:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='You do not have a store yet',
+            )
+
+        return store
