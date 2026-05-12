@@ -113,3 +113,7 @@ class StoreWithProductsPublic(BaseModel):
     products: list[ProductPublic] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class MyStoreList(BaseModel):
+    stores: list[StorePublic]

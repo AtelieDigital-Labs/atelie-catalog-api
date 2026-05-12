@@ -9,6 +9,7 @@ from app.schemas.store import (
     CategoryPublic,
     CategorySchema,
     CategoryUpdate,
+    MyStoreList,
     StoreList,
     StorePublic,
     StoreSchema,
@@ -145,3 +146,18 @@ class StoreService:
             updated_at=store.updated_at,
             products=active_products,
         )
+
+    @staticmethod
+    async def get_my_store(
+        session: AsyncSession,
+        user_id: str,
+    ) -> MyStoreList:
+        stores = await StoreRepository.get_by_artisan_id(session, user_id)
+
+        if not stores:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='You do not have a store yet',
+            )
+
+        return {'stores': stores}

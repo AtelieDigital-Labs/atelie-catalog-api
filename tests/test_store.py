@@ -335,3 +335,47 @@ async def test_get_store_empty_products(client, store):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()['products'] == []
+
+
+@pytest.mark.asyncio
+async def test_get_my_store_success(client, user, store):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        response = await client.get(
+            '/stores/me',
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert response.status_code == HTTPStatus.OK
+
+        data = response.json()
+        assert len(data['stores']) >= 1
+        assert any(s['artisan_id'] == user.id for s in data['stores'])
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_my_store_not_found(client, other_user):
+    """other_user does not have a store."""
+    app.dependency_overrides[get_current_user] = lambda: other_user
+
+    try:
+        response = await client.get(
+            '/stores/me',
+            headers={'Authorization': f'Bearer {other_user.token}'},
+        )
+
+        assert response.status_code == HTTPStatus.NOT_FOUND
+        assert response.json()['detail'] == 'You do not have a store yet'
+
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_my_store_requires_auth(client):
+    response = await client.get('/stores/me')
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
