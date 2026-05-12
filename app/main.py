@@ -14,11 +14,13 @@ if sys.platform == 'win32':
 
 app = FastAPI()
 
-app.include_router(store_router)
-app.include_router(auth_router)
-app.include_router(product_router)
-app.include_router(favorite_router)
-app.include_router(review_router)
+API_PREFIX = "/api/catalog"
+
+app.include_router(store_router, prefix=API_PREFIX)
+app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(product_router, prefix=API_PREFIX)
+app.include_router(favorite_router, prefix=API_PREFIX)
+app.include_router(review_router, prefix=API_PREFIX)
 
 
 @app.get('/')
