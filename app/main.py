@@ -14,7 +14,7 @@ if sys.platform == 'win32':
 
 app = FastAPI()
 
-API_PREFIX = "/api/catalog"
+API_PREFIX = "/api/v1/catalog"
 
 app.include_router(store_router, prefix=API_PREFIX)
 app.include_router(auth_router, prefix=API_PREFIX)
