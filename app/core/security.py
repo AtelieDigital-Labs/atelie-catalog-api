@@ -10,7 +10,7 @@ from app.core.config import Settings
 settings = Settings()
 
 # Onde o Swagger vai buscar o token
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/catalog/token-mock')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/catalog/token-mock')
 
 
 # Modelo simples para representar o usuário logado
