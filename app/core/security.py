@@ -26,7 +26,7 @@ async def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
-        user_id: str = payload.get('sub')
+        user_id: str = payload.get('user_id')
 
         if not user_id:
             raise HTTPException(
