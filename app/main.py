@@ -14,12 +14,13 @@ if sys.platform == 'win32':
 
 app = FastAPI()
 
-API_PREFIX = "/api/v1/catalog"
+API_PREFIX = '/api/v1/catalog'
 
 app.include_router(store_router, prefix=API_PREFIX)
 app.include_router(product_router, prefix=API_PREFIX)
 app.include_router(favorite_router, prefix=API_PREFIX)
 app.include_router(review_router, prefix=API_PREFIX)
+
 
 def custom_openapi():
     if app.openapi_schema:
@@ -48,6 +49,7 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+
 
 @app.get('/')
 def read_root():

@@ -101,7 +101,8 @@ async def client(session):
     app.dependency_overrides[get_session] = _get_test_db
 
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url='http://test'
+        transport=ASGITransport(app=app),
+        base_url='http://test/api/v1/catalog',
     ) as ac:
         yield ac
 
