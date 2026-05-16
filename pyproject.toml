@@ -58,3 +58,10 @@ post_test = 'coverage html'
 
 # Execução
 run = 'fastapi dev app/main.py'
+
+# Docker
+up = 'docker compose up -d'
+down = 'docker compose down'
+logs = 'docker compose logs -f catalog_api'
+rebuild = 'docker compose up -d --build'
+restart = 'docker compose restart'

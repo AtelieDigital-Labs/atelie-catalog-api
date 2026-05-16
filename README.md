@@ -49,10 +49,21 @@ task test
 task lint
 ```
 ### 📁 Estrutura de Comandos (Taskipy)
-```task run ```: Inicia o servidor de desenvolvimento.
 
-```task test```: Executa os testes unitários e de integração com cobertura.
+`task run`: Inicia o servidor de desenvolvimento.
 
-```task lint ```: Verifica padrões de código com Ruff.
+`task test`: Executa os testes unitários e de integração com cobertura.
 
-```task format ```: Aplica formatação automática de código.
+`task lint`: Verifica padrões de código com Ruff.
+
+`task format`: Aplica formatação automática de código.
+
+`task up`: Sobe os containers Docker.
+
+`task down`: Derruba os containers Docker.
+
+`task restart`: Reinicia o container da API.
+
+`task rebuild`: Rebuilda e sobe os containers.
+
+`task logs`: Acompanha os logs da API em tempo real.
