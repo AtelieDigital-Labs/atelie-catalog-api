@@ -161,7 +161,7 @@ async def test_patch_store_profile_success(client, user, store):
     }
 
     response = await client.patch(
-        f'/stores/{store.id}',
+        '/stores/me',
         json=payload,
         headers={'Authorization': f'Bearer {user.token}'},
     )
@@ -186,7 +186,7 @@ async def test_patch_store_address_success(client, user, store):
     payload = {'address': {'street': new_street, 'number': new_number}}
 
     response = await client.patch(
-        f'/stores/{store.id}',
+        '/stores/me',
         json=payload,
         headers={'Authorization': f'Bearer {user.token}'},
     )
@@ -201,19 +201,19 @@ async def test_patch_store_address_success(client, user, store):
 
 
 @pytest.mark.asyncio
-async def test_patch_store_forbidden(client, other_user, store):
-    # Usando o other_user para testar a negação de acesso
+async def test_patch_store_forbidden(client, other_user):
     app.dependency_overrides[get_current_user] = lambda: other_user
+
     try:
-        payload = {'description': 'Tentativa de alteração indevida'}
         response = await client.patch(
-            f'/stores/{store.id}',
-            json=payload,
+            '/stores/me',  # ← sem store_id
+            json={'description': 'Tentativa de alteração indevida'},
             headers={'Authorization': f'Bearer {other_user.token}'},
         )
 
         assert response.status_code == HTTPStatus.NOT_FOUND
-        assert 'permissão' in response.json()['detail']
+        assert response.json()['detail'] == 'You do not have a store yet'
+
     finally:
         app.dependency_overrides.clear()
 
@@ -251,13 +251,13 @@ async def test_get_store_returns_only_active_products(client, user, store):
 
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Ativo'),
+            json=make_product(name='Produto Ativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Inativo'),
+            json=make_product(name='Produto Inativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -292,7 +292,6 @@ async def test_get_store_returns_only_products_with_stock(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Com Estoque',
                 variations=[make_variation(stock=10)],
             ),
@@ -302,7 +301,6 @@ async def test_get_store_returns_only_products_with_stock(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Sem Estoque',
                 variations=[make_variation(stock=0)],
             ),
@@ -350,8 +348,7 @@ async def test_get_my_store_success(client, user, store):
         assert response.status_code == HTTPStatus.OK
 
         data = response.json()
-        assert len(data['stores']) >= 1
-        assert any(s['artisan_id'] == user.id for s in data['stores'])
+        assert data['artisan_id'] == user.id
 
     finally:
         app.dependency_overrides.clear()

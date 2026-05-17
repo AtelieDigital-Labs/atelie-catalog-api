@@ -11,7 +11,6 @@ from app.schemas.store import (
     CategoryPublic,
     CategorySchema,
     CategoryUpdate,
-    MyStoreList,
     StoreList,
     StorePublic,
     StoreSchema,
@@ -61,14 +60,13 @@ async def list_stores(
     return await StoreService.list_all(session, limit, offset)
 
 
-@router.patch('/{store_id}', response_model=StorePublic)
-async def update_store(
-    store_id: int,
+@router.patch('/me', response_model=StorePublic)
+async def update_my_store(
     payload: StoreUpdate,
     user: CurrentUser,
     session: Session,
 ):
-    return await StoreService.update(session, store_id, payload, user.id)
+    return await StoreService.update_my_store(session, payload, user.id)
 
 
 @router.patch('/categories/{category_id}', response_model=CategoryPublic)
@@ -81,11 +79,8 @@ async def update_category(
     return await CategoryService.update(session, category_id, payload)
 
 
-@router.get('/me', response_model=MyStoreList)
-async def get_my_store(
-    user: CurrentUser,
-    session: Session,
-):
+@router.get('/me', response_model=StorePublic)
+async def get_my_store(user: CurrentUser, session: Session):
     return await StoreService.get_my_store(session, user.id)
 
 

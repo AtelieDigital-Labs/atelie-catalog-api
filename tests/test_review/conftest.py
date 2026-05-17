@@ -10,11 +10,11 @@ def make_review(**kwargs):
     return base
 
 
-async def create_product_and_review(client, user, store, **kwargs):
-    """Helper — cria produto e avaliação em um passo."""
+async def create_product_and_review(client, user, **kwargs):
+    """cria produto e avaliação em um passo."""
     create_response = await client.post(
         '/products/',
-        json=make_product(store.id),
+        json=make_product(),
         headers={'Authorization': f'Bearer {user.token}'},
     )
 

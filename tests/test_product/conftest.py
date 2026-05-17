@@ -12,11 +12,10 @@ def make_variation(**kwargs):
     return base
 
 
-def make_product(store_id, **kwargs):
+def make_product(**kwargs):
     base = {
         'name': 'Produto Teste',
         'description': 'descrição teste',
-        'store_id': store_id,
         'variations': [make_variation()],
     }
     base.update(kwargs)

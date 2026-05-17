@@ -15,7 +15,6 @@ async def test_get_product_success(client, user, store):
         create_response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Get',
                 variations=[
                     make_variation(
@@ -80,7 +79,6 @@ async def test_get_product_returns_all_variations(client, user, store):
         create_response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Multi Variações',
                 variations=[
                     make_variation(sku='VAR-001', color='Azul', size='P'),
@@ -110,7 +108,7 @@ async def test_get_product_does_not_require_auth(client, user, store):
 
     create_response = await client.post(
         '/products/',
-        json=make_product(store.id, name='Produto Público'),
+        json=make_product(name='Produto Público'),
         headers={'Authorization': f'Bearer {user.token}'},
     )
 
@@ -132,7 +130,7 @@ async def test_get_inactive_product_returns_404(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Inativo'),
+            json=make_product(name='Produto Inativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 

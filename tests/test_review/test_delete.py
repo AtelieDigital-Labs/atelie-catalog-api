@@ -12,7 +12,7 @@ async def test_delete_review_success(client, user, store):
     app.dependency_overrides[get_current_user] = lambda: user
 
     try:
-        product_id = await create_product_and_review(client, user, store)
+        product_id = await create_product_and_review(client, user)
 
         response = await client.delete(
             f'/reviews/{product_id}',

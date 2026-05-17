@@ -15,7 +15,6 @@ async def test_create_product_success(client, user, store):
         EXPECTED_PRICE = 10.5
 
         payload = make_product(
-            store.id,
             name='Produto Teste',
             description='Descrição teste',
             variations=[
@@ -65,20 +64,18 @@ async def test_create_product_success(client, user, store):
 
 
 @pytest.mark.asyncio
-async def test_create_product_store_not_found(client, user):
-    app.dependency_overrides[get_current_user] = lambda: user
+async def test_create_product_store_not_found(client, other_user):
+    app.dependency_overrides[get_current_user] = lambda: other_user
 
     try:
         response = await client.post(
             '/products/',
-            json=make_product(store_id=999),
-            headers={'Authorization': f'Bearer {user.token}'},
+            json=make_product(name='Produto Ativo'),
+            headers={'Authorization': f'Bearer {other_user.token}'},
         )
 
         assert response.status_code == HTTPStatus.NOT_FOUND
-        assert response.json()['detail'] == (
-            'Loja não encontrada ou sem permissão'
-        )
+        assert response.json()['detail'] == 'You do not have a store yet'
 
     finally:
         app.dependency_overrides.clear()
@@ -86,18 +83,19 @@ async def test_create_product_store_not_found(client, user):
 
 @pytest.mark.asyncio
 async def test_create_product_store_belongs_to_another_user(
-    client, user, other_user, store
+    client, other_user
 ):
     app.dependency_overrides[get_current_user] = lambda: other_user
 
     try:
         response = await client.post(
             '/products/',
-            json=make_product(store.id),
+            json=make_product(name='Produto Ativo'),
             headers={'Authorization': f'Bearer {other_user.token}'},
         )
 
         assert response.status_code == HTTPStatus.NOT_FOUND
+        assert response.json()['detail'] == 'You do not have a store yet'
 
     finally:
         app.dependency_overrides.clear()
@@ -110,7 +108,7 @@ async def test_create_product_without_variations(client, user, store):
     try:
         response = await client.post(
             '/products/',
-            json=make_product(store.id, variations=[]),
+            json=make_product(name='Produto Ativo', variations=[]),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -128,7 +126,7 @@ async def test_create_product_name_too_short(client, user, store):
     try:
         response = await client.post(
             '/products/',
-            json=make_product(store.id, name='AB'),
+            json=make_product(name='AB'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -146,7 +144,7 @@ async def test_create_product_negative_price(client, user, store):
         response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
+                name='Produto Ativo',
                 variations=[make_variation(price=-1)],
             ),
             headers={'Authorization': f'Bearer {user.token}'},
@@ -166,7 +164,7 @@ async def test_create_product_duplicate_sku(client, user, store):
         response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
+                name='Produto Ativo',
                 variations=[
                     make_variation(sku='SKU-IGUAL'),
                     make_variation(sku='SKU-IGUAL'),

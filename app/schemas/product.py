@@ -92,8 +92,6 @@ class ProductSchema(BaseModel):
         max_length=255,
         examples=['Camiseta feita à mão com tecido natural'],
     )
-    store_id: int = Field(examples=[1])
-
     variations: List[ProductVariationSchema]
 
 

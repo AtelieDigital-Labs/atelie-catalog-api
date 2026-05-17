@@ -14,7 +14,7 @@ async def test_add_favorite_success(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Favorito'),
+            json=make_product(name='Produto Favorito'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -60,7 +60,7 @@ async def test_add_favorite_inactive_product(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Inativo'),
+            json=make_product(name='Produto Inativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -91,7 +91,7 @@ async def test_add_favorite_duplicate(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Duplicado'),
+            json=make_product(name='Produto Duplicado'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -122,7 +122,7 @@ async def test_add_favorite_requires_auth(client, store, user):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id),
+            json=make_product(name='Produto Sem Auth'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 

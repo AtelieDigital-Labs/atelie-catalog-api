@@ -35,7 +35,7 @@ async def test_list_favorites_success(client, user, store):
         for name in ['Produto A', 'Produto B']:
             create_response = await client.post(
                 '/products/',
-                json=make_product(store.id, name=name),
+                json=make_product(name=name),
                 headers={'Authorization': f'Bearer {user.token}'},
             )
 
@@ -73,7 +73,7 @@ async def test_list_favorites_only_current_user(
     app.dependency_overrides[get_current_user] = lambda: user
 
     try:
-        await create_and_favorite(client, user, store)
+        await create_and_favorite(client, user)
 
         app.dependency_overrides[get_current_user] = lambda: other_user
 

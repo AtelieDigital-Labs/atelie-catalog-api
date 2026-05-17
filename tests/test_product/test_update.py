@@ -14,7 +14,7 @@ async def test_update_product_name(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Nome Original'),
+            json=make_product(name='Nome Original'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -59,7 +59,7 @@ async def test_update_product_forbidden(client, user, other_user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Protegido'),
+            json=make_product(name='Produto Protegido'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -94,7 +94,6 @@ async def test_update_product_variations_and_images(client, user, store):
         create_response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Original',
                 variations=[
                     make_variation(
@@ -198,7 +197,6 @@ async def test_update_product_remove_variation(client, user, store):
         create_response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 variations=[
                     make_variation(sku='VAR-RM-1'),
                     make_variation(sku='VAR-RM-2'),
@@ -244,7 +242,6 @@ async def test_update_product_duplicate_sku(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 variations=[make_variation(sku='SKU-EXISTENTE')],
             ),
             headers={'Authorization': f'Bearer {user.token}'},
@@ -253,7 +250,6 @@ async def test_update_product_duplicate_sku(client, user, store):
         create_response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 variations=[make_variation(sku='SKU-PARA-ATUALIZAR')],
             ),
             headers={'Authorization': f'Bearer {user.token}'},

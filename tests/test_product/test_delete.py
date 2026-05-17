@@ -14,7 +14,7 @@ async def test_delete_product_success(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Delete'),
+            json=make_product(name='Produto Delete'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -59,7 +59,7 @@ async def test_delete_product_forbidden(client, user, other_user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Protegido'),
+            json=make_product(name='Produto Protegido'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -91,7 +91,6 @@ async def test_delete_product_removes_variations_and_images(
         create_response = await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Cascade',
                 variations=[
                     make_variation(
