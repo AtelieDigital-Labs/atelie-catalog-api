@@ -15,7 +15,7 @@ async def test_create_review_success(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Avaliado'),
+            json=make_product(name='Produto Avaliado'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -48,7 +48,7 @@ async def test_create_review_without_comment(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Sem Comentário'),
+            json=make_product(name='Produto Sem Comentário'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -93,7 +93,7 @@ async def test_create_review_inactive_product(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Inativo'),
+            json=make_product(name='Produto Inativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -125,7 +125,7 @@ async def test_create_review_duplicate(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Duplicado'),
+            json=make_product(name='Produto Duplicado'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -160,7 +160,7 @@ async def test_create_review_invalid_rating(client, user, store):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Rating Inválido'),
+            json=make_product(name='Produto Rating Inválido'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -186,7 +186,7 @@ async def test_create_review_requires_auth(client, store, user):
     try:
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id),
+            json=make_product(name='Produto Sem Autenticação'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 

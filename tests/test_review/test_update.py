@@ -14,9 +14,7 @@ async def test_update_review_rating(client, user, store):
     try:
         UPDATED_RATING = 3
 
-        product_id = await create_product_and_review(
-            client, user, store, rating=5
-        )
+        product_id = await create_product_and_review(client, user, rating=5)
 
         response = await client.patch(
             f'/reviews/{product_id}',
@@ -37,7 +35,7 @@ async def test_update_review_comment(client, user, store):
 
     try:
         product_id = await create_product_and_review(
-            client, user, store, comment='Comentário original'
+            client, user, comment='Comentário original'
         )
 
         response = await client.patch(
@@ -76,7 +74,7 @@ async def test_update_review_invalid_rating(client, user, store):
     app.dependency_overrides[get_current_user] = lambda: user
 
     try:
-        product_id = await create_product_and_review(client, user, store)
+        product_id = await create_product_and_review(client, user)
 
         response = await client.patch(
             f'/reviews/{product_id}',

@@ -12,7 +12,7 @@ async def test_remove_favorite_success(client, user, store):
     app.dependency_overrides[get_current_user] = lambda: user
 
     try:
-        product_id = await create_and_favorite(client, user, store)
+        product_id = await create_and_favorite(client, user)
 
         response = await client.delete(
             f'/favorites/{product_id}',

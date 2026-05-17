@@ -3,7 +3,6 @@ import sys
 
 from fastapi import FastAPI
 
-
 from app.api.routes.favorite import router as favorite_router
 from app.api.routes.product import router as product_router
 from app.api.routes.review import router as review_router

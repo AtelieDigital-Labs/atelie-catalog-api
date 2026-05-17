@@ -24,12 +24,12 @@ async def test_list_products_success(client, user, store):
 
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Um'),
+            json=make_product(name='Produto Um'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Dois'),
+            json=make_product(name='Produto Dois'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -53,13 +53,13 @@ async def test_list_products_only_active(client, user, store):
 
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Ativo'),
+            json=make_product(name='Produto Ativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
         create_response = await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Inativo'),
+            json=make_product(name='Produto Inativo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -92,7 +92,7 @@ async def test_list_products_filter_by_q(client, user, store):
         for name in ['Camiseta Azul', 'Camiseta Verde', 'Calça Preta']:
             await client.post(
                 '/products/',
-                json=make_product(store.id, name=name),
+                json=make_product(name=name),
                 headers={'Authorization': f'Bearer {user.token}'},
             )
 
@@ -115,7 +115,7 @@ async def test_list_products_filter_by_store(client, user, store):
     try:
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto da Loja'),
+            json=make_product(name='Produto da Loja'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -148,7 +148,6 @@ async def test_list_products_filter_by_min_price(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Barato',
                 variations=[make_variation(price=30)],
             ),
@@ -158,7 +157,6 @@ async def test_list_products_filter_by_min_price(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Caro',
                 variations=[make_variation(price=200)],
             ),
@@ -187,7 +185,6 @@ async def test_list_products_filter_by_max_price(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Barato',
                 variations=[make_variation(price=50)],
             ),
@@ -197,7 +194,6 @@ async def test_list_products_filter_by_max_price(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Caro',
                 variations=[make_variation(price=200)],
             ),
@@ -226,7 +222,6 @@ async def test_list_products_filter_by_price_range(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Barato',
                 variations=[make_variation(price=30)],
             ),
@@ -236,7 +231,6 @@ async def test_list_products_filter_by_price_range(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Medio',
                 variations=[make_variation(price=100)],
             ),
@@ -246,7 +240,6 @@ async def test_list_products_filter_by_price_range(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Caro',
                 variations=[make_variation(price=200)],
             ),
@@ -274,7 +267,7 @@ async def test_list_products_filter_by_category(client, user, store, category):
 
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto da Categoria'),
+            json=make_product(name='Produto da Categoria'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -300,7 +293,6 @@ async def test_list_products_filter_combined(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Camiseta Barata',
                 variations=[make_variation(price=50)],
             ),
@@ -310,7 +302,6 @@ async def test_list_products_filter_combined(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Camiseta Cara',
                 variations=[make_variation(price=200)],
             ),
@@ -320,7 +311,6 @@ async def test_list_products_filter_combined(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Calça Barata',
                 variations=[make_variation(price=50)],
             ),
@@ -347,7 +337,6 @@ async def test_list_products_sort_by_price_asc(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Caro',
                 variations=[make_variation(price=200)],
             ),
@@ -357,7 +346,6 @@ async def test_list_products_sort_by_price_asc(client, user, store):
         await client.post(
             '/products/',
             json=make_product(
-                store.id,
                 name='Produto Barato',
                 variations=[make_variation(price=30)],
             ),
@@ -387,13 +375,13 @@ async def test_list_products_sort_by_newest(client, user, store):
     try:
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Antigo'),
+            json=make_product(name='Produto Antigo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
         await client.post(
             '/products/',
-            json=make_product(store.id, name='Produto Novo'),
+            json=make_product(name='Produto Novo'),
             headers={'Authorization': f'Bearer {user.token}'},
         )
 
@@ -419,7 +407,7 @@ async def test_list_products_pagination(client, user, store):
         for i in range(TOTAL_PRODUCTS):
             await client.post(
                 '/products/',
-                json=make_product(store.id, name=f'Produto {i}'),
+                json=make_product(name=f'Produto {i}'),
                 headers={'Authorization': f'Bearer {user.token}'},
             )
 

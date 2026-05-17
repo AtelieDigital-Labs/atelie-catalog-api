@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.store import Store
 from app.repositories.product import ProductRepository
+from app.repositories.store import StoreRepository
 from app.schemas.product import (
     FilterProduct,
     ProductList,
@@ -21,12 +22,13 @@ class ProductService:
         payload: ProductSchema,
         user_id: str,
     ):
-        store = await session.get(Store, payload.store_id)
+        # busca a loja do artesão automaticamente
+        store = await StoreRepository.get_by_artisan_id(session, user_id)
 
-        if not store or store.artisan_id != user_id:
+        if not store:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
-                detail='Loja não encontrada ou sem permissão',
+                detail='You do not have a store yet',
             )
 
         try:
@@ -34,7 +36,7 @@ class ProductService:
                 session,
                 name=payload.name,
                 description=payload.description,
-                store_id=payload.store_id,
+                store_id=store.id,
                 variations_data=payload.variations,
             )
         except IntegrityError:

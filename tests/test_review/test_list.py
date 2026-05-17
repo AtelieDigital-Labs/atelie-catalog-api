@@ -14,7 +14,7 @@ async def test_list_reviews_empty(client, user, store):
 
     create_response = await client.post(
         '/products/',
-        json=make_product(store.id, name='Produto Sem Avaliação'),
+        json=make_product(name='Produto Sem Avaliação'),
         headers={'Authorization': f'Bearer {user.token}'},
     )
 
@@ -42,7 +42,7 @@ async def test_list_reviews_success(client, user, other_user, store):
 
     create_response = await client.post(
         '/products/',
-        json=make_product(store.id, name='Produto Avaliado'),
+        json=make_product(name='Produto Avaliado'),
         headers={'Authorization': f'Bearer {user.token}'},
     )
 
@@ -84,7 +84,7 @@ async def test_list_reviews_product_not_found(client):
 async def test_list_reviews_does_not_require_auth(client, user, store):
     app.dependency_overrides[get_current_user] = lambda: user
 
-    product_id = await create_product_and_review(client, user, store)
+    product_id = await create_product_and_review(client, user)
 
     del app.dependency_overrides[get_current_user]  # ← remove só o user
 
