@@ -104,25 +104,21 @@ class StoreService:
         return {'stores': stores}
 
     @staticmethod
-    async def update(
+    async def update_my_store(
         session: AsyncSession,
-        store_id: int,
         payload: StoreUpdate,
         user_id: str,
     ) -> StorePublic:
-        db_store = await StoreRepository.get_by_id_and_owner(
-            session, store_id, user_id
-        )
+        store = await StoreRepository.get_by_artisan_id(session, user_id)
 
-        if not db_store:
+        if not store:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
-                detail='Loja não encontrada ou você não possui '
-                'permissão para editá-la',
+                detail='You do not have a store yet',
             )
 
         update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
-        return await StoreRepository.update(session, db_store, update_data)
+        return await StoreRepository.update(session, store, update_data)
 
     @staticmethod
     async def get_with_products(

@@ -161,7 +161,7 @@ async def test_patch_store_profile_success(client, user, store):
     }
 
     response = await client.patch(
-        f'/stores/{store.id}',
+        '/stores/me',
         json=payload,
         headers={'Authorization': f'Bearer {user.token}'},
     )
@@ -186,7 +186,7 @@ async def test_patch_store_address_success(client, user, store):
     payload = {'address': {'street': new_street, 'number': new_number}}
 
     response = await client.patch(
-        f'/stores/{store.id}',
+        '/stores/me',
         json=payload,
         headers={'Authorization': f'Bearer {user.token}'},
     )
@@ -201,19 +201,19 @@ async def test_patch_store_address_success(client, user, store):
 
 
 @pytest.mark.asyncio
-async def test_patch_store_forbidden(client, other_user, store):
-    # Usando o other_user para testar a negação de acesso
+async def test_patch_store_forbidden(client, other_user):
     app.dependency_overrides[get_current_user] = lambda: other_user
+
     try:
-        payload = {'description': 'Tentativa de alteração indevida'}
         response = await client.patch(
-            f'/stores/{store.id}',
-            json=payload,
+            '/stores/me',  # ← sem store_id
+            json={'description': 'Tentativa de alteração indevida'},
             headers={'Authorization': f'Bearer {other_user.token}'},
         )
 
         assert response.status_code == HTTPStatus.NOT_FOUND
-        assert 'permissão' in response.json()['detail']
+        assert response.json()['detail'] == 'You do not have a store yet'
+
     finally:
         app.dependency_overrides.clear()
 

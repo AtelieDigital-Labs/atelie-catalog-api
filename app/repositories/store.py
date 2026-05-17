@@ -72,22 +72,6 @@ class StoreRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_by_id_and_owner(
-        session: AsyncSession,
-        store_id: int,
-        user_id: str,
-    ) -> Store | None:
-        result = await session.execute(
-            select(Store)
-            .where(Store.id == store_id, Store.artisan_id == user_id)
-            .options(
-                joinedload(Store.category),
-                joinedload(Store.address),
-            )
-        )
-        return result.scalar_one_or_none()
-
-    @staticmethod
     async def list_all(
         session: AsyncSession,
         limit: int = 10,
