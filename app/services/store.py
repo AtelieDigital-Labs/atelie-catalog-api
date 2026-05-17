@@ -73,6 +73,15 @@ class StoreService:
         payload: StoreSchema,
         user_id: str,
     ) -> StorePublic:
+
+        existing = await StoreRepository.get_by_artisan_id(session, user_id)
+
+        if existing:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail='You already have a store',
+            )
+
         category = await CategoryRepository.get_by_id(
             session, payload.category_id
         )
