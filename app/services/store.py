@@ -165,3 +165,21 @@ class StoreService:
             )
 
         return store
+
+    @staticmethod
+    async def get_artisan(
+        session: AsyncSession,
+        store_id: int,
+    ):
+        store = await StoreRepository.get_by_id(session, store_id)
+
+        if not store:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='Store not found',
+            )
+
+        return {
+            'store_id': store.id,
+            'artisan_id': store.artisan_id,
+        }
