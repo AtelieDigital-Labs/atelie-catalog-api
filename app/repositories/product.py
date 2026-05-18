@@ -25,6 +25,18 @@ class ProductRepository:
         return result.unique().scalar_one_or_none()
 
     @staticmethod
+    async def get_variation_by_id(
+        session: AsyncSession,
+        variation_id: int,
+    ) -> ProductVariation | None:
+        result = await session.execute(
+            select(ProductVariation)
+            .where(ProductVariation.id == variation_id)
+            .options(joinedload(ProductVariation.product))
+        )
+        return result.unique().scalar_one_or_none()
+
+    @staticmethod
     async def list_with_filters(
         session: AsyncSession,
         filters: FilterProduct,

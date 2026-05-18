@@ -12,6 +12,7 @@ from app.schemas.product import (
     ProductPublic,
     ProductSchema,
     ProductUpdate,
+    ProductVariationDetail,
 )
 from app.services.product import ProductService
 
@@ -35,6 +36,14 @@ async def list_products(
     filters: Annotated[FilterProduct, Depends()],
 ):
     return await ProductService.list_products(session, filters)
+
+
+@router.get(
+    '/variations/{variation_id}',
+    response_model=ProductVariationDetail,
+)
+async def get_variation(variation_id: int, session: Session):
+    return await ProductService.get_variation_by_id(session, variation_id)
 
 
 @router.get('/{product_id}', response_model=ProductPublic)

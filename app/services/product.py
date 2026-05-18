@@ -12,6 +12,7 @@ from app.schemas.product import (
     ProductList,
     ProductSchema,
     ProductUpdate,
+    ProductVariationDetail,
 )
 
 
@@ -65,6 +66,36 @@ class ProductService:
             )
 
         return product
+
+    @staticmethod
+    async def get_variation_by_id(
+        session: AsyncSession,
+        variation_id: int,
+    ):
+        variation = await ProductRepository.get_variation_by_id(
+            session, variation_id
+        )
+
+        if not variation:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='Variation not found',
+            )
+
+        return ProductVariationDetail(
+            id=variation.id,
+            product_id=variation.product_id,
+            store_id=variation.product.store_id,  # ← pega do produto
+            price=variation.price,
+            stock=variation.stock,
+            weight=float(variation.weight),
+            height=float(variation.height),
+            width=float(variation.width),
+            length=float(variation.length),
+            sku=variation.sku,
+            color=variation.color,
+            size=variation.size,
+        )
 
     @staticmethod
     async def update(
