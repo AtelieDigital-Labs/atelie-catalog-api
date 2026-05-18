@@ -47,6 +47,11 @@ class StoreSchema(BaseModel):
     banner: str | None = Field(default=None, max_length=255)
     address: AddressSchema
 
+    pix_key: str = Field(
+        max_length=150,
+        examples=['artesao@email.com'],
+    )
+
 
 class StorePublic(BaseModel):
     id: int
@@ -117,3 +122,8 @@ class StoreWithProductsPublic(BaseModel):
 
 class MyStoreList(BaseModel):
     stores: list[StorePublic]
+
+
+class StoreArtisanPublic(BaseModel):
+    store_id: int
+    artisan_id: str

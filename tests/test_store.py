@@ -64,6 +64,7 @@ async def test_create_store_success(client, category, user):
             'name': 'Ateliê B',
             'description': 'Produtos artesanais',
             'category_id': category.id,
+            'pix_key': 'artesao@email.com',
             'image': 'http://foto.jpg',
             'banner': 'http://banner.jpg',
             'address': {
@@ -104,6 +105,7 @@ async def test_create_store_invalid_category(client, user):
         json={
             'name': 'Loja Errada',
             'category_id': 9999,
+            'pix_key': 'teste@email.com',
             'address': {
                 'street': 'Rua de Teste',
                 'number': 123,
@@ -140,7 +142,19 @@ async def test_create_store_validation_name_too_short(client, category, user):
 
     response = await client.post(
         '/stores/',
-        json={'name': 'Ab', 'category_id': category.id},
+        json={
+            'name': 'Ab',
+            'category_id': category.id,
+            'pix_key': 'teste@email.com',
+            'address': {
+                'street': 'Rua A',
+                'number': 1,
+                'neighborhood': 'Centro',
+                'city': 'Natal',
+                'state': 'RN',
+                'zip_code': '59000-000',
+            },
+        },
         headers={'Authorization': f'Bearer {user.token}'},
     )
 
@@ -216,9 +230,6 @@ async def test_patch_store_forbidden(client, other_user):
 
     finally:
         app.dependency_overrides.clear()
-
-
-# GET /stores/{id}
 
 
 @pytest.mark.asyncio
@@ -376,3 +387,75 @@ async def test_get_my_store_not_found(client, other_user):
 async def test_get_my_store_requires_auth(client):
     response = await client.get('/stores/me')
     assert response.status_code == HTTPStatus.UNAUTHORIZED
+
+
+@pytest.mark.asyncio
+async def test_get_store_artisan_success(client, store):
+
+    response = await client.get(f'/stores/{store.id}/artisan')
+
+    assert response.status_code == HTTPStatus.OK
+
+    data = response.json()
+
+    assert data['store_id'] == store.id
+    assert data['artisan_id'] == store.artisan_id
+
+
+@pytest.mark.asyncio
+async def test_get_store_artisan_not_found(client):
+
+    response = await client.get('/stores/999/artisan')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+    assert response.json()['detail'] == 'Store not found'
+
+
+@pytest.mark.asyncio
+async def test_get_store_artisan_does_not_require_auth(
+    client,
+    store,
+):
+
+    response = await client.get(f'/stores/{store.id}/artisan')
+
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.asyncio
+async def test_create_store_does_not_return_pix_key(
+    client,
+    category,
+    user,
+):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    try:
+        response = await client.post(
+            '/stores/',
+            json={
+                'name': 'Ateliê Seguro',
+                'description': 'Produtos',
+                'category_id': category.id,
+                'pix_key': 'segredo@email.com',
+                'address': {
+                    'street': 'Rua A',
+                    'number': 1,
+                    'neighborhood': 'Centro',
+                    'city': 'Natal',
+                    'state': 'RN',
+                    'zip_code': '59000-000',
+                },
+            },
+            headers={'Authorization': f'Bearer {user.token}'},
+        )
+
+        assert response.status_code == HTTPStatus.CREATED
+
+        data = response.json()
+
+        assert 'pix_key' not in data
+
+    finally:
+        app.dependency_overrides.clear()

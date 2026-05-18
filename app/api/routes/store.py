@@ -11,6 +11,7 @@ from app.schemas.store import (
     CategoryPublic,
     CategorySchema,
     CategoryUpdate,
+    StoreArtisanPublic,
     StoreList,
     StorePublic,
     StoreSchema,
@@ -82,6 +83,17 @@ async def update_category(
 @router.get('/me', response_model=StorePublic)
 async def get_my_store(user: CurrentUser, session: Session):
     return await StoreService.get_my_store(session, user.id)
+
+
+@router.get(
+    '/{store_id}/artisan',
+    response_model=StoreArtisanPublic,
+)
+async def get_store_artisan(
+    store_id: int,
+    session: Session,
+):
+    return await StoreService.get_artisan(session, store_id)
 
 
 @router.get('/{store_id}', response_model=StoreWithProductsPublic)
