@@ -147,3 +147,25 @@ class FilterProduct(BaseModel):
     min_price: Optional[float] = Field(default=None, gt=0)
     max_price: Optional[float] = Field(default=None, gt=0)
     sort: Optional[Literal['price_asc', 'newest']] = None
+
+
+class ProductVariationDetail(BaseModel):
+    id: int
+    product_id: int
+    store_id: int
+    price: Decimal
+    stock: int
+    weight: float
+    height: float
+    width: float
+    length: float
+    sku: Optional[str] = None
+    color: Optional[str] = None
+    size: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer('price')
+    @staticmethod
+    def serialize_price(value: Decimal):
+        return float(value)
