@@ -91,8 +91,17 @@ class StoreService:
                 status_code=HTTPStatus.NOT_FOUND,
                 detail='Categoria informada não existe',
             )
+        store = await StoreRepository.create(session, payload, user_id)
 
-        return await StoreRepository.create(session, payload, user_id)
+        from ..messaging.publishers.store_created import publisher_store_created
+        from ..messaging.events.store_created import StoreCreatedEvent
+        event = StoreCreatedEvent(
+            store_id=store.id,
+            artisan_id=store.artisan_id
+        )
+        publisher_store_created(event)
+        
+        return store
 
     @staticmethod
     async def list_all(
