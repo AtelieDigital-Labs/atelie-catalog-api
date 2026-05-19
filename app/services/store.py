@@ -97,7 +97,8 @@ class StoreService:
         from ..messaging.events.store_created import StoreCreatedEvent
         event = StoreCreatedEvent(
             store_id=store.id,
-            artisan_id=store.artisan_id
+            artisan_id=store.artisan_id,
+            pix_key=payload.pix_key
         )
         publisher_store_created(event)
         
