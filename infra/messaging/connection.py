@@ -9,7 +9,7 @@ def get_connection():
     )
 
     parameters = pika.ConnectionParameters(
-        host='127.0.0.1',
+        host='rabbitmq',
         port=5672,
         credentials=credentials,
     )

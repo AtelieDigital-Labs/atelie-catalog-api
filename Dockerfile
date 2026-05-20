@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 # Instala o uv dentro do container (forma oficial e rápida)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
@@ -21,4 +21,4 @@ RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["sh", "entrypoint.sh"]
