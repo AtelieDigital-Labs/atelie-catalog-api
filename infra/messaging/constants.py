@@ -1,16 +1,17 @@
-# Exchanges
-ACCOUNTS_EXCHANGE = "accounts.events"
-CATALOG_EXCHANGE = "catalogs.events"
-ORDER_EXCHANGE = "orders.events"
+from enum import StrEnum
 
-# Store_Created
-STORE_CREATED_QUEUE= "catalogs.store.created.queue"
-STORE_CREATED_ROUTING_KEY = "catalogs.store.created"
+class Exchange(StrEnum):
+    ACCOUNTS_EXCHANGE = "accounts.events"
+    ORDER_EXCHANGE = "orders.events"
+    CATALOG_EXCHANGE = "catalogs.events"
 
-# User_Created
-USER_CREATED_ROUTING_KEY = "accounts.user.created"
-USER_CREATED_QUEUE = "accounts.user.created.queue"
+class Queue(StrEnum):
+    USER_CREATED_QUEUE = "accounts.user.created.queue"
+    WALLET_TRANSACTION_QUEUE = 'accounts.wallet.transaction.queue'
+    BECOME_ARTISAN_QUEUE= "accounts.become.artisan.queue"
+    CREATE_WALLET_QUEUE= "accounts.create.wallet.queue"
 
-# Order_Paid
-ORDER_PAID_ROUTING_KEY = "orders.order.paid"
-WALLET_TRANSACTION_QUEUE = 'accounts.wallet.transaction.queue'
+class RoutingKey(StrEnum):
+    USER_CREATED_ROUTING_KEY = "accounts.user.created"
+    ORDER_PAID_ROUTING_KEY = "orders.order.paid"
+    STORE_CREATED_ROUTING_KEY = "catalogs.store.created"
