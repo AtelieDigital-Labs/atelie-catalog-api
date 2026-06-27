@@ -19,7 +19,14 @@ exchange_orders = RabbitExchange(
     durable=True
 )
 
+exchange_dlq = RabbitExchange(
+    name=Exchange.DQL_EXCHANGE,
+    type=ExchangeType.TOPIC,
+    durable=True
+)
+
 async def declare_exchange(broker: RabbitBroker):
     await broker.declare_exchange(exchange_accounts)
     await broker.declare_exchange(exchange_catalogs)
     await broker.declare_exchange(exchange_orders)
+    await broker.declare_exchange(exchange_dlq)
