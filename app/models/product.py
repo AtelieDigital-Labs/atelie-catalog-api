@@ -1,4 +1,5 @@
 from decimal import Decimal
+from enum import StrEnum
 from typing import List, Optional
 
 from sqlalchemy import Boolean, ForeignKey, Numeric, String
@@ -8,7 +9,7 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
-
+from datetime import datetime, timedelta, timezone
 from app.models.base import table_registry
 
 
@@ -94,3 +95,36 @@ class ProductImage:
         init=False,
         back_populates='images',
     )
+
+class ReservationStatus(StrEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    EXPIRED = "expired"
+    CANCELED = "canceled"
+
+def get_default_expiration() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(minutes=15)
+
+@mapped_as_dataclass(table_registry, kw_only=True)
+class StockReservation:
+    __tablename__ = 'stock_reservation'
+
+    id: Mapped[int] = mapped_column(init=False, primary_key=True)
+    
+    product_variant_id: Mapped[int] = mapped_column(
+        ForeignKey('product_variations.id', ondelete='CASCADE') 
+    )
+
+    order_id: Mapped[int] = mapped_column(index=True)
+    
+    quantity: Mapped[int] = mapped_column()
+    
+    # default_factory garante que a função execute CADA VEZ que um novo objeto for criado
+    expire: Mapped[datetime] = mapped_column(
+        default_factory=get_default_expiration
+    )
+    
+    status: Mapped[ReservationStatus] = mapped_column(
+        default=ReservationStatus.PENDING
+    )
+    

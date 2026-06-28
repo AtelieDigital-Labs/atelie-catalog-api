@@ -1,11 +1,12 @@
 from http import HTTPStatus
 
+from app.models.product import ReservationStatus
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.store import Store
-from app.repositories.product import ProductRepository
+from app.repositories.product import ProductRepository, StockReservationRepository
 from app.repositories.store import StoreRepository
 from app.schemas.product import (
     FilterProduct,
@@ -154,3 +155,57 @@ class ProductService:
             )
 
         await ProductRepository.delete(session, product)
+
+    @staticmethod
+    async def reserve(session: AsyncSession, data):
+        try:
+            variant = await ProductRepository.get_variation_by_id(session, data.product_variant_id)
+            if not variant:
+                raise Exception("Product not Found")
+            if variant.stock < data.quantity:
+                raise Exception("Estoque insuficiente")
+            variant.stock -= data.quantity
+
+            reserve = await StockReservationRepository.create(
+                session=session,
+                data=data
+            )
+
+            await session.commit()
+            await session.refresh(reserve)
+            return reserve
+        except Exception:
+            await session.rollback()
+
+    @staticmethod
+    async def confirm_reserve(session: AsyncSession, data):
+        try:
+            reserve = await StockReservationRepository.get_by_order_id(session, order_id=data.order_id)
+            if reserve.status != ReservationStatus.PENDING:
+                return reserve
+            reserve = await StockReservationRepository.change_status(session, reserve=reserve, status=ReservationStatus.CONFIRMED)
+
+            await session.commit()
+            return await session.refresh(reserve)
+        except Exception:
+            await session.rollback()
+
+    @staticmethod
+    async def expire_reserve(session: AsyncSession, data):
+        try:
+            variant = await ProductRepository.get_variation_by_id(session, data.product_variant_id)
+            if not variant:
+                raise Exception("Product not Found")
+            reserve = await StockReservationRepository.get_by_id(session, reserve_id=data.reserve_id)
+
+            if reserve.status != ReservationStatus.PENDING:
+                return reserve
+
+            reserve = await StockReservationRepository.change_status(session, reserve=reserve, status=ReservationStatus.EXPIRED)
+            variant.stock += reserve.quantity
+
+            await session.commit()
+            return await session.refresh(reserve)
+        except Exception:
+            await session.rollback()
+

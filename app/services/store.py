@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from infra.messaging.publishers.store_created import publisher_store_created
 from app.repositories.store import CategoryRepository, StoreRepository
 from app.schemas.store import (
     CategoryList,
@@ -91,8 +91,26 @@ class StoreService:
                 status_code=HTTPStatus.NOT_FOUND,
                 detail='Categoria informada não existe',
             )
+        store = await StoreRepository.create(session, payload, user_id)
 
-        return await StoreRepository.create(session, payload, user_id)
+        
+        from infra.messaging.events.store_created import StoreCreatedEvent
+        event = StoreCreatedEvent(
+            store_id=str(store.id),
+            artisan_id=store.artisan_id,
+            pix_key=payload.pix_key
+        )
+        await publisher_store_created(event)
+        
+        return store
+
+    
+    # async def publish_messaging(data: dict):
+    #     from ..messaging.publishers.store_created import publisher_store_created
+    #     from ..messaging.events.store_created import StoreCreatedEvent
+    #     await broker.publish(
+
+    #     )
 
     @staticmethod
     async def list_all(

@@ -25,6 +25,9 @@ services:
       - "8008:8000"
     volumes:
       - .:/app
+    networks:
+      - default
+      - atelie-network
     depends_on:
       catalog_database:
         condition: service_healthy
@@ -37,3 +40,7 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  atelie-network:
+    external: true

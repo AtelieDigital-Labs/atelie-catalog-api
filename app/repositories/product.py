@@ -5,7 +5,9 @@ from sqlalchemy.orm import joinedload
 from app.models.product import Product, ProductImage, ProductVariation
 from app.models.store import Store
 from app.schemas.product import FilterProduct
-
+from infra.messaging.events.order_create import OrderCreatedEvent
+from ..models.product import ReservationStatus, StockReservation
+from app.models import product
 
 class ProductRepository:
     @staticmethod
@@ -185,6 +187,30 @@ class ProductRepository:
     async def delete(session: AsyncSession, product: Product) -> None:
         await session.delete(product)
         await session.commit()
+
+class StockReservationRepository:
+    @staticmethod
+    async def create(session: AsyncSession, data: OrderCreatedEvent):
+        reserve = StockReservation(**data.model_dump())
+        session.add(reserve)
+        
+        return reserve
+    
+    @staticmethod
+    async def get_by_id(session: AsyncSession, reserve_id):
+        return await session.get(StockReservation, id=reserve_id)
+    
+    @staticmethod
+    async def get_by_order_id(session: AsyncSession, order_id):
+        return await session.get(StockReservation, order_id=order_id)
+
+    @staticmethod
+    async def change_status(session: AsyncSession, status: ReservationStatus, reserve: StockReservation):
+        reserve.status = status
+        session.add(reserve)
+
+        return reserve
+    
 
 
 def _update_image(
