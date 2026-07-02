@@ -2,7 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import pool, text
 
 from alembic import context
 
@@ -17,8 +17,8 @@ from app.models.review import Review
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
-config.set_main_option("sqlalchemy.url", Settings().DATABASE_URL)
+settings = Settings()
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -63,7 +63,18 @@ def run_migrations_offline() -> None:
 
 # função auxiliar sincrona
 def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
+    # 1. Garante que o schema existe no banco físico
+    connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {settings.DATABASE_SCHEMA};"))
+    
+    # 2. Força a conexão atual a olhar para o schema correto
+    connection.execute(text(f"SET search_path TO {settings.DATABASE_SCHEMA};"))
+
+    connection.commit()
+    
+    context.configure(
+        connection=connection, 
+        target_metadata=target_metadata,
+    )
 
     with context.begin_transaction():
         context.run_migrations()

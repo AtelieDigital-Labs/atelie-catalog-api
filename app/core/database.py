@@ -4,9 +4,16 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core.config import Settings
+from app.core.config import settings
 
-engine = create_async_engine(Settings().DATABASE_URL)
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    connect_args={
+        "server_settings": {
+            "search_path": settings.DATABASE_SCHEMA
+        }
+    }
+)
 
 
 SessionLocal = async_sessionmaker(
