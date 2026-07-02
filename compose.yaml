@@ -1,22 +1,4 @@
 services:
-  catalog_database:
-    image: postgres:16-alpine
-    container_name: catalog_database
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app_user -d catalog_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    environment:
-      POSTGRES_USER: app_user
-      POSTGRES_DB: catalog_db
-      POSTGRES_PASSWORD: app_password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5434:5432"
-
   catalog_api:
     build: .
     container_name: catalog_service_api
@@ -26,20 +8,9 @@ services:
     volumes:
       - .:/app
     networks:
-      - default
       - atelie-network
-    depends_on:
-      catalog_database:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql+psycopg://app_user:app_password@catalog_database:5432/catalog_db
-    # Carrega as outras variáveis (como SECRET_KEY) do .env
     env_file:
       - .env
-    
-
-volumes:
-  pgdata:
 
 networks:
   atelie-network:
