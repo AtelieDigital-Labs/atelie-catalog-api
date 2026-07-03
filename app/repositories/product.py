@@ -45,7 +45,6 @@ class ProductRepository:
     ) -> list[Product]:
         query = (
             select(Product)
-            .where(Product.is_active)
             .options(
                 joinedload(Product.variations).joinedload(
                     ProductVariation.images
