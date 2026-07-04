@@ -9,10 +9,12 @@ from app.api.routes.review import router as review_router
 from app.api.routes.store import router as store_router
 from app.core.openapi import configure_openapi
 from .core.lifespan import lifespan
+import app.core.event_table 
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+ 
 app = FastAPI(lifespan=lifespan)
 
 API_PREFIX = '/api/v1/catalog'

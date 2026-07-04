@@ -1,4 +1,4 @@
-from sqlalchemy import asc, func, select
+from sqlalchemy import asc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -183,8 +183,30 @@ class ProductRepository:
         return result.unique().scalar_one()
 
     @staticmethod
-    async def delete(session: AsyncSession, product: Product) -> None:
-        await session.delete(product)
+    async def delete(session: AsyncSession, product_id: int) -> None:
+
+        await session.execute(
+            update(Product)
+            .where(Product.id == product_id)
+            .values(is_deleted=True)
+        )
+
+        await session.execute(
+            update(ProductVariation)
+            .where(ProductVariation.product_id == product_id)
+            .values(is_deleted=True)
+        )
+
+        await session.execute(
+            update(ProductImage)
+            .where(
+                ProductImage.variation_id.in_(
+                    select(ProductVariation.id).where(ProductVariation.product_id == product_id)
+                )
+            )
+            .values(is_deleted=True)
+        )
+
         await session.commit()
 
 class StockReservationRepository:
