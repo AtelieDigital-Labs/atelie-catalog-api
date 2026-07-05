@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
 from app.core.config import Settings
+from app.core.context import current_user_id
 
 settings = Settings()
 
@@ -27,6 +28,8 @@ async def get_current_user(
             algorithms=[settings.ALGORITHM],
         )
         user_id: str = payload.get('user_id')
+
+        current_user_id.set(user_id)
 
         if not user_id:
             raise HTTPException(

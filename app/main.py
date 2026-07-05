@@ -9,7 +9,8 @@ from app.api.routes.review import router as review_router
 from app.api.routes.store import router as store_router
 from app.core.openapi import configure_openapi
 from .core.lifespan import lifespan
-import app.core.event_table 
+import app.core.event_table
+import app.audit.product_audit   
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
