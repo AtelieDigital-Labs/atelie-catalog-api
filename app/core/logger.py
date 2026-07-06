@@ -10,6 +10,8 @@ def setup_trigger_logger():
 
     logger.propagate = False
 
+    logger.setLevel(logging.DEBUG)
+
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(logging.DEBUG)

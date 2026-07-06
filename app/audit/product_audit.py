@@ -48,8 +48,6 @@ def generate_log_update_stock_product(mapper: Mapper, connection: Connection, ta
         "reason": "Alteração de estoque do produto variante"
     }
 
-    print(log_payload)
-
     connection.execute(
         LogOutbox.__table__.insert().values(
             log_id = log_payload["log_id"],
@@ -73,7 +71,6 @@ def generate_log_update_price_product(mapper: Mapper, connection: Connection, ta
         return
 
     old_price = price_history.deleted[0] if price_history.deleted else None
-    print(old_price)
 
     new_price = price_history.added[0] if price_history.added else None
 
@@ -98,9 +95,6 @@ def generate_log_update_price_product(mapper: Mapper, connection: Connection, ta
         },
         "reason": "Alteração de preço do produto variante"
     }
-    
-    print(log_payload)
-
 
     connection.execute(
         LogOutbox.__table__.insert().values(
@@ -144,9 +138,6 @@ def generate_log_update_store(mapper: Mapper, connection: Connection, target: Ad
         "changes": alters,
         "reason": "Alteração de dados do endereço da loja"
     }
-
-    print(log_payload)
-
 
     connection.execute(
         LogOutbox.__table__.insert().values(
