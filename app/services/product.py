@@ -60,7 +60,7 @@ class ProductService:
     async def get_by_id(session: AsyncSession, product_id: int):
         product = await ProductRepository.get_by_id(session, product_id)
 
-        if not product or not product.is_active:
+        if not product:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
                 detail='Product not found',
@@ -77,10 +77,10 @@ class ProductService:
             session, variation_id
         )
 
-        if not variation:
+        if not variation or not variation.product:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
-                detail='Variation not found',
+                detail='Variation or Product not found',
             )
 
         return ProductVariationDetail(
@@ -154,7 +154,7 @@ class ProductService:
                 detail='Not enough permissions',
             )
 
-        await ProductRepository.delete(session, product)
+        await ProductRepository.delete(session, product_id)
 
     @staticmethod
     async def reserve(session: AsyncSession, data):

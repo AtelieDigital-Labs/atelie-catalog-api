@@ -2,7 +2,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import List, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String
+from sqlalchemy import Boolean, ForeignKey, Numeric, String, DateTime, func
 from sqlalchemy.orm import (
     Mapped,
     mapped_as_dataclass,
@@ -12,9 +12,12 @@ from sqlalchemy.orm import (
 from datetime import datetime, timedelta, timezone
 from app.models.base import table_registry
 
+class VisibilityMixin:
+    is_deleted: Mapped[bool] = mapped_column(Boolean, init=False, default=False)
+
 
 @mapped_as_dataclass(table_registry, kw_only=True)
-class Product:
+class Product(VisibilityMixin):
     __tablename__ = 'products'
 
     id: Mapped[int] = mapped_column(init=False, primary_key=True)
@@ -32,8 +35,12 @@ class Product:
     )
 
 
+    created_at: Mapped[datetime] = mapped_column(DateTime, init=False,server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, init=False,server_default=func.now(), onupdate=func.now())
+
+
 @mapped_as_dataclass(table_registry, kw_only=True)
-class ProductVariation:
+class ProductVariation(VisibilityMixin):
     __tablename__ = 'product_variations'
 
     id: Mapped[int] = mapped_column(init=False, primary_key=True)
@@ -79,7 +86,7 @@ class ProductVariation:
 
 
 @mapped_as_dataclass(table_registry, kw_only=True)
-class ProductImage:
+class ProductImage(VisibilityMixin):
     __tablename__ = 'product_images'
 
     id: Mapped[int] = mapped_column(init=False, primary_key=True)
@@ -128,3 +135,4 @@ class StockReservation:
         default=ReservationStatus.PENDING
     )
     
+

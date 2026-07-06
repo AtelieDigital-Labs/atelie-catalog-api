@@ -1,13 +1,20 @@
-from sqlalchemy import asc, func, select
+from sqlalchemy import asc, func, select, update, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-
 from app.models.product import Product, ProductImage, ProductVariation
 from app.models.store import Store
 from app.schemas.product import FilterProduct
 from infra.messaging.events.order_create import OrderCreatedEvent
 from ..models.product import ReservationStatus, StockReservation
 from app.models import product
+import uuid
+from datetime import datetime, timezone
+from app.models.outbox import LogOutbox
+from app.core.context import current_user_id
+from app.core.logger import setup_trigger_logger
+
+
+logger = setup_trigger_logger()
 
 class ProductRepository:
     @staticmethod
@@ -45,7 +52,6 @@ class ProductRepository:
     ) -> list[Product]:
         query = (
             select(Product)
-            .where(Product.is_active)
             .options(
                 joinedload(Product.variations).joinedload(
                     ProductVariation.images
@@ -180,13 +186,67 @@ class ProductRepository:
                 )
             )
         )
-
+ 
         return result.unique().scalar_one()
 
     @staticmethod
-    async def delete(session: AsyncSession, product: Product) -> None:
-        await session.delete(product)
+    async def delete(session: AsyncSession, product_id: int) -> None:
+        actor = str(current_user_id.get())
+
+        await session.execute(
+            update(Product)
+            .where(Product.id == product_id)
+            .values(is_deleted=True)
+        )
+
+        await session.execute(
+            update(ProductVariation)
+            .where(ProductVariation.product_id == product_id)
+            .values(is_deleted=True)
+        )
+
+        await session.execute(
+            update(ProductImage)
+            .where(
+                ProductImage.variation_id.in_(
+                    select(ProductVariation.id).where(ProductVariation.product_id == product_id)
+                )
+            )
+            .values(is_deleted=True)
+        )
+
+        log_payload = {
+            "log_id": str(uuid.uuid4()),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "microservice": "Catalog",
+            "actor": {
+                "user_id": actor
+            },
+            "action": "SOFT DELETE",
+            "resource": "Product",
+            "resource_id": product_id,
+            "changes": {
+                "status": {
+                    "old_value": None,
+                    "new_value": "DELETED" 
+                }
+            },
+            "reason": "Deleção lógica de um produto e suas cascatas"
+        }
+
+        await session.execute(
+            insert(LogOutbox).values(
+                log_id=log_payload["log_id"],
+                aggregate_type="Product",
+                aggregate_id=str(product_id), 
+                payload=log_payload,
+                processed=False
+            )
+        )
+
         await session.commit()
+
+        logger.info(f"[SOFT DELETE] Transação concluída e outbox salvo. Produto {product_id} deletado.")
 
 class StockReservationRepository:
     @staticmethod

@@ -5,6 +5,8 @@ class Exchange(StrEnum):
     ORDER_EXCHANGE = "orders.events"
     CATALOG_EXCHANGE = "catalogs.events"
     DQL_EXCHANGE = "dql.evenvts"
+    LOG_EXCHANGE = "logs.events"
+
 
 class Queue(StrEnum):
     USER_CREATED_QUEUE = "accounts.user.created.queue"
@@ -22,3 +24,4 @@ class RoutingKey(StrEnum):
     ORDER_CREATED_ROUTING_KEY = "orders.order.created"
     STORE_CREATED_ROUTING_KEY = "catalogs.store.created"
     STOCK_RESERVATION_EXPIRE_ROUTING_KEY = "catalogs.stock.reservation.expire"
+    LOG_REGISTER_ROUTING_KEY = "logs.register"
