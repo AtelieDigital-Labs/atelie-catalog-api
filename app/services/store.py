@@ -1,7 +1,9 @@
 from http import HTTPStatus
 
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.minio import S3Client
+from app.services.storage import StorageService
 from infra.messaging.publishers.store_created import publisher_store_created
 from app.repositories.store import CategoryRepository, StoreRepository
 from app.schemas.store import (
@@ -12,9 +14,13 @@ from app.schemas.store import (
     StoreList,
     StorePublic,
     StoreSchema,
+    StoreSchemaPrivate,
     StoreUpdate,
+    StoreUpdatePrivate,
     StoreWithProductsPublic,
 )
+from pathlib import Path
+from uuid import uuid4
 
 
 class CategoryService:
@@ -71,7 +77,10 @@ class StoreService:
     async def create(
         session: AsyncSession,
         payload: StoreSchema,
+        image: UploadFile,
+        banner: UploadFile,
         user_id: str,
+        storage,
     ) -> StorePublic:
 
         existing = await StoreRepository.get_by_artisan_id(session, user_id)
@@ -91,26 +100,35 @@ class StoreService:
                 status_code=HTTPStatus.NOT_FOUND,
                 detail='Categoria informada não existe',
             )
-        store = await StoreRepository.create(session, payload, user_id)
 
-        
+        image_url = StorageService.upload(
+            file=image,
+            directory='stores'
+        )
+
+        banner_url = StorageService.upload(
+            file=banner,
+            directory='stores'
+        )
+
+        data = StoreSchemaPrivate(
+            **payload.model_dump(),
+            image=image_url,
+            banner=banner_url,
+        )
+
+        store = await StoreRepository.create(session, data, user_id)
+
         from infra.messaging.events.store_created import StoreCreatedEvent
+
         event = StoreCreatedEvent(
             store_id=str(store.id),
             artisan_id=store.artisan_id,
-            pix_key=payload.pix_key
+            pix_key=payload.pix_key,
         )
         await publisher_store_created(event)
-        
+
         return store
-
-    
-    # async def publish_messaging(data: dict):
-    #     from ..messaging.publishers.store_created import publisher_store_created
-    #     from ..messaging.events.store_created import StoreCreatedEvent
-    #     await broker.publish(
-
-    #     )
 
     @staticmethod
     async def list_all(
@@ -125,6 +143,8 @@ class StoreService:
     async def update_my_store(
         session: AsyncSession,
         payload: StoreUpdate,
+        image: UploadFile,
+        banner: UploadFile,
         user_id: str,
     ) -> StorePublic:
         store = await StoreRepository.get_by_artisan_id(session, user_id)
@@ -135,8 +155,33 @@ class StoreService:
                 detail='You do not have a store yet',
             )
 
-        update_data = payload.model_dump(exclude_unset=True, exclude_none=True)
-        return await StoreRepository.update(session, store, update_data)
+        image_key = None
+        banner_key = None
+
+        if image:
+            image_key = StorageService.upload(
+                image,
+                "stores/images",
+            )
+
+            if store.image:
+                StorageService.delete(store.image)
+
+        if banner:
+            banner_key = StorageService.upload(
+                banner,
+                "stores/banners",
+            )
+
+            if store.banner:
+                StorageService.delete(store.banner)
+
+        data = StoreUpdatePrivate(
+            **payload.model_dump(exclude_unset=True),
+            image=image_key,
+            banner=banner_key,
+        )
+        return await StoreRepository.update(session, store, data.model_dump(exclude_none=True))
 
     @staticmethod
     async def get_with_products(

@@ -1,7 +1,7 @@
 from http import HTTPStatus
-from typing import Annotated
+from typing import Annotated, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
@@ -68,3 +68,7 @@ async def delete_product(
     session: Session,
 ):
     await ProductService.delete(session, product_id, user.id)
+
+@router.post("/{variant_id}/images/")
+async def create_variant_image(variant_id: int, images: List[UploadFile] = File(...)):
+    ...

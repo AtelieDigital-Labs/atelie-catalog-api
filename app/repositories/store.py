@@ -4,6 +4,7 @@ from sqlalchemy.orm import joinedload
 
 from app.models.product import Product, ProductVariation
 from app.models.store import Address, Store, StoreCategory
+from app.schemas.store import StoreSchemaPrivate
 
 
 class CategoryRepository:
@@ -88,7 +89,7 @@ class StoreRepository:
     @staticmethod
     async def create(
         session: AsyncSession,
-        payload,
+        payload: StoreSchemaPrivate,
         user_id: str,
     ) -> Store:
         db_store = Store(
