@@ -2,7 +2,7 @@ from faststream.rabbit import RabbitQueue
 from .constants import RoutingKey, Queue
 from .exchanges import exchange_dlq
 
-FIFITEEN_MINUTES_IN_MILLISECONDS = 5 * 60 * 1000
+FIFITEEN_MINUTES_IN_MILLISECONDS = 15 * 60 * 1000
 
 product_reservation_queue = RabbitQueue(
     name=Queue.STOCK_RESERVATION_QUEUE,
