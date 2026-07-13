@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError
 from fastapi import UploadFile
 
 from app.core.config import settings
+from urllib.parse import urlparse, urlunparse
 
 
 class StorageService:
@@ -41,7 +42,6 @@ class StorageService:
         file: UploadFile,
         directory: str,
     ) -> str:
-        print(file.file.closed)
         key = f"{directory}/{uuid4()}{Path(file.filename).suffix}"
 
         StorageService._client.upload_fileobj(
@@ -82,17 +82,26 @@ class StorageService:
         )
 
     @staticmethod
-    def presigned_url(
-        key: str,
-        expires_in: int = 300,
-    ) -> str:
-        return StorageService._client.generate_presigned_url(
+    def presigned_url(key: str, expires_in: int = 300) -> str:
+        url = StorageService._client.generate_presigned_url(
             "get_object",
             Params={
                 "Bucket": StorageService._bucket,
                 "Key": key,
             },
             ExpiresIn=expires_in,
+        )
+
+        internal = urlparse(settings.MINIO_ENDPOINT_URL)
+        public = urlparse(settings.MINIO_PUBLIC_URL)
+
+        parsed = urlparse(url)
+
+        return urlunparse(
+            parsed._replace(
+                scheme=public.scheme,
+                netloc=public.netloc,
+            )
         )
 
     @staticmethod

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.minio import S3Client
 from app.core.security import CurrentUser
+from app.schemas.product import ProductPublic
 from app.schemas.store import (
     CategoryList,
     CategoryPublic,
@@ -19,6 +20,7 @@ from app.schemas.store import (
     StoreUpdate,
     StoreWithProductsPublic,
 )
+from app.services.product import ProductService
 from app.services.store import CategoryService, StoreService
 
 router = APIRouter(prefix='/stores', tags=['stores'])
@@ -117,3 +119,11 @@ async def get_store_artisan(
 @router.get('/{store_id}', response_model=StoreWithProductsPublic)
 async def get_store(store_id: int, session: Session):
     return await StoreService.get_with_products(session, store_id)
+
+@router.get("/me/products/", response_model=list[ProductPublic])
+async def get_me_store_products(user: CurrentUser, session: Session):
+    return await StoreService.get_products(session, user.id)
+    
+@router.get("/{store_id}/products/", response_model=list[ProductPublic])
+async def get_store_products(store_id: int, session: Session):
+    return await ProductService.get_by_store_id(session, store_id)

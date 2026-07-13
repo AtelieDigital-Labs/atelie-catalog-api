@@ -1,6 +1,9 @@
+from operator import and_
+
 from sqlalchemy import asc, func, select, update, insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import aliased, joinedload, query
+from app.models.favorite import Favorite
 from app.models.product import Product, ProductImage, ProductVariation
 from app.models.store import Store
 from app.schemas.product import FilterProduct
@@ -49,9 +52,21 @@ class ProductRepository:
     async def list_with_filters(
         session: AsyncSession,
         filters: FilterProduct,
+        user_id: str
     ) -> list[Product]:
+        FavoriteAlias = aliased(Favorite)
         query = (
-            select(Product)
+            select(
+                Product,
+                (FavoriteAlias.id.is_not(None)).label("is_favorite"),
+            )
+            .outerjoin(
+                FavoriteAlias,
+                and_(
+                    FavoriteAlias.product_id == Product.id,
+                    FavoriteAlias.user_id == user_id,
+                ),
+            )
             .options(
                 joinedload(Product.variations).joinedload(
                     ProductVariation.images
@@ -137,14 +152,6 @@ class ProductRepository:
 
             session.add(db_variation)
             await session.flush()
-
-            for image_data in variation_data.images:
-                db_image = ProductImage(
-                    variation_id=db_variation.id,
-                    url=image_data.url,
-                    is_primary=image_data.is_primary,
-                )
-                session.add(db_image)
 
         await session.commit()
 
@@ -248,6 +255,40 @@ class ProductRepository:
 
         logger.info(f"[SOFT DELETE] Transação concluída e outbox salvo. Produto {product_id} deletado.")
 
+    @staticmethod
+    async def get_by_ids(session: AsyncSession, list_ids: list[int]):
+        print(list_ids)
+        query = (
+            select(Product)
+            .where(Product.id.in_(list_ids))
+            .options(
+                joinedload(Product.variations).joinedload(
+                    ProductVariation.images
+                )
+            )
+        )
+        result = await session.execute(query)
+        return list(result.unique().scalars().all())
+
+    
+    @staticmethod
+    async def get_by_store_id(
+        session: AsyncSession,
+        store_id: int,
+    ) -> list[Product]:
+        query = (
+            select(Product)
+            .where(Product.store_id == store_id)
+            .options(
+                joinedload(Product.variations)
+                .joinedload(ProductVariation.images)
+            )
+        )
+
+        result = await session.execute(query)
+        return result.unique().scalars().all()
+
+
 class StockReservationRepository:
     @staticmethod
     async def create(session: AsyncSession, data: OrderCreatedEvent):
@@ -271,7 +312,18 @@ class StockReservationRepository:
 
         return reserve
     
+class ProductImageRepository:
+    @staticmethod
+    async def create(session: AsyncSession, variation_id, url: str):
+        image = ProductImage(
+            variation_id=variation_id,
+            url=url
+        )
+        session.add(image)
+        await session.flush()
+        await session.refresh(image)
 
+        return image
 
 def _update_image(
     db_variation: ProductVariation,

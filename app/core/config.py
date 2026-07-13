@@ -15,5 +15,6 @@ class Settings(BaseSettings):
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
     MINIO_BUCKET: str
+    MINIO_PUBLIC_URL: str
 
 settings = Settings()

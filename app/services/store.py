@@ -3,6 +3,8 @@ from http import HTTPStatus
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.minio import S3Client
+from app.models import product
+from app.services.product import ProductService
 from app.services.storage import StorageService
 from infra.messaging.publishers.store_created import publisher_store_created
 from app.repositories.store import CategoryRepository, StoreRepository
@@ -206,8 +208,8 @@ class StoreService:
             name=store.name,
             description=store.description,
             category=store.category,
-            image=store.image,
-            banner=store.banner,
+            image=StorageService.presigned_url(store.image),
+            banner=StorageService.presigned_url(store.banner),
             address=store.address,
             created_at=store.created_at,
             updated_at=store.updated_at,
@@ -226,8 +228,12 @@ class StoreService:
                 status_code=HTTPStatus.NOT_FOUND,
                 detail='You do not have a store yet',
             )
+        store_public = StorePublic.model_validate(store)
 
-        return store
+        store_public.image = StorageService.presigned_url(store.image)
+        store_public.banner = StorageService.presigned_url(store.banner)
+
+        return store_public
 
     @staticmethod
     async def get_artisan(
@@ -246,3 +252,10 @@ class StoreService:
             'store_id': store.id,
             'artisan_id': store.artisan_id,
         }
+
+    @staticmethod
+    async def get_products(session: AsyncSession, user_id: str):
+        store = await StoreService.get_my_store(session, user_id)
+        products = await ProductService.get_by_store_id(session, store.id)
+
+        return products

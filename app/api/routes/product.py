@@ -1,7 +1,9 @@
+import json
+
 from http import HTTPStatus
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
@@ -21,21 +23,35 @@ router = APIRouter(prefix='/products', tags=['products'])
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
-@router.post('/', response_model=ProductPublic, status_code=HTTPStatus.CREATED)
+@router.post('/', status_code=HTTPStatus.CREATED)
 async def create_product(
-    payload: ProductSchema,
     session: Session,
     user: CurrentUser,
+    payload: Annotated[str, Form()],
+    images: list[UploadFile],
+    image_variant_ids: list[str] = Form(...),
 ):
-    return await ProductService.create(session, payload, user.id)
+    data = ProductSchema.model_validate(json.loads(payload))
+    await ProductService.create(session, data, images, image_variant_ids ,user.id)
+    return "Created"
 
 
 @router.get('/', response_model=ProductList)
 async def list_products(
     session: Session,
     filters: Annotated[FilterProduct, Depends()],
+    user: CurrentUser,
 ):
-    return await ProductService.list_products(session, filters)
+    return await ProductService.list_products(session, filters, user.id)
+
+
+@router.post('/me/favorites', response_model=ProductList)
+async def get_me_products_favorites(
+    session: Session,
+    list_ids: list[int]
+    
+):
+    return await ProductService.products_favorites_by_ids(session, list_ids)
 
 
 @router.get(
@@ -68,7 +84,3 @@ async def delete_product(
     session: Session,
 ):
     await ProductService.delete(session, product_id, user.id)
-
-@router.post("/{variant_id}/images/")
-async def create_variant_image(variant_id: int, images: List[UploadFile] = File(...)):
-    ...
