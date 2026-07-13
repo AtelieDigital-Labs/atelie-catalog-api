@@ -51,10 +51,10 @@ Após a criação, **ative o ambiente virtual**:
     .venv\Scripts\activate
 
 ### 3. Instalando as Bibliotecas
-Com o ambiente ativado, instale as dependências listadas nas tecnologias utilizando o `uv`. Você pode instalar todas de uma vez através do seu arquivo de dependências (como o `pyproject.toml` ou `requirements.txt`):
+Com o ambiente ativado, instale as dependências listadas nas tecnologias utilizando o `uv`:
 
 ```bash
-uv pip install -r requirements.txt
+uv sync
 ```
 
 *Caso precise instalar as bibliotecas manualmente para testar o ambiente, o comando base seria:*
