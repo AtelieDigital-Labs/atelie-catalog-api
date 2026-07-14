@@ -1,8 +1,9 @@
 from operator import and_
 
+from sqlalchemy import case
 from sqlalchemy import asc, func, select, update, insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, joinedload, query
+from sqlalchemy.orm import aliased, joinedload, query, with_expression
 from app.models.favorite import Favorite
 from app.models.product import Product, ProductImage, ProductVariation
 from app.models.store import Store
@@ -21,19 +22,49 @@ logger = setup_trigger_logger()
 
 class ProductRepository:
     @staticmethod
+    def _apply_favorites_and_options(stmt, user=None):
+        """
+        Método auxiliar para aplicar de forma consistente o mapeamento de favoritos 
+        e o carregamento das variações/imagens em qualquer query de Produto.
+        """
+        FavoriteAlias = aliased(Favorite)
+        if user:
+            stmt = (
+                stmt.outerjoin(
+                    FavoriteAlias,
+                    and_(
+                        FavoriteAlias.product_id == Product.id,
+                        FavoriteAlias.user_id == user.id,
+                    ),
+                )
+                .options(
+                    with_expression(
+                        Product.is_favorite,
+                        case(
+                            (FavoriteAlias.id.is_not(None), True),
+                            else_=False,
+                        ),
+                    )
+                )
+            )
+        
+        # Carregamento ansioso (Eager Loading) padrão para variações e imagens
+        return stmt.options(
+            joinedload(Product.variations).joinedload(
+                ProductVariation.images
+            )
+        )
+
+    @staticmethod
     async def get_by_id(
         session: AsyncSession,
         product_id: int,
+        user=None,  # Adicionado suporte ao usuário
     ) -> Product | None:
-        result = await session.execute(
-            select(Product)
-            .where(Product.id == product_id)
-            .options(
-                joinedload(Product.variations).joinedload(
-                    ProductVariation.images
-                )
-            )
-        )
+        stmt = select(Product).where(Product.id == product_id)
+        stmt = ProductRepository._apply_favorites_and_options(stmt, user)
+        
+        result = await session.execute(stmt)
         return result.unique().scalar_one_or_none()
 
     @staticmethod
@@ -52,45 +83,28 @@ class ProductRepository:
     async def list_with_filters(
         session: AsyncSession,
         filters: FilterProduct,
-        user_id: str
+        user=None,  # Definido valor padrão None
     ) -> list[Product]:
-        FavoriteAlias = aliased(Favorite)
-        query = (
-            select(
-                Product,
-                (FavoriteAlias.id.is_not(None)).label("is_favorite"),
-            )
-            .outerjoin(
-                FavoriteAlias,
-                and_(
-                    FavoriteAlias.product_id == Product.id,
-                    FavoriteAlias.user_id == user_id,
-                ),
-            )
-            .options(
-                joinedload(Product.variations).joinedload(
-                    ProductVariation.images
-                )
-            )
-        )
+        stmt = select(Product)
+        stmt = ProductRepository._apply_favorites_and_options(stmt, user)
 
         if filters.q:
-            query = query.where(Product.name.ilike(f'%{filters.q}%'))
+            stmt = stmt.where(Product.name.ilike(f'%{filters.q}%'))
 
         if filters.category_id:
-            query = query.join(Store).where(
+            stmt = stmt.join(Store).where(
                 Store.category_id == filters.category_id
             )
 
         if filters.min_price:
-            query = query.where(
+            stmt = stmt.where(
                 Product.variations.any(
                     ProductVariation.price >= filters.min_price
                 )
             )
 
         if filters.max_price:
-            query = query.where(
+            stmt = stmt.where(
                 Product.variations.any(
                     ProductVariation.price <= filters.max_price
                 )
@@ -106,17 +120,17 @@ class ProductRepository:
                 .subquery()
             )
 
-            query = query.outerjoin(
+            stmt = stmt.outerjoin(
                 min_price_subquery,
                 Product.id == min_price_subquery.c.product_id,
             ).order_by(asc(min_price_subquery.c.min_price))
 
         elif filters.sort == 'newest':
-            query = query.order_by(Product.id.desc())
+            stmt = stmt.order_by(Product.id.desc())
 
-        query = query.limit(filters.limit).offset(filters.offset)
+        stmt = stmt.limit(filters.limit).offset(filters.offset)
 
-        result = await session.execute(query)
+        result = await session.execute(stmt)
         return list(result.unique().scalars().all())
 
     @staticmethod
@@ -155,16 +169,10 @@ class ProductRepository:
 
         await session.commit()
 
-        result = await session.execute(
-            select(Product)
-            .where(Product.id == db_product.id)
-            .options(
-                joinedload(Product.variations).joinedload(
-                    ProductVariation.images
-                )
-            )
-        )
+        stmt = select(Product).where(Product.id == db_product.id)
+        stmt = ProductRepository._apply_favorites_and_options(stmt, None)
 
+        result = await session.execute(stmt)
         return result.unique().scalar_one()
 
     @staticmethod
@@ -184,16 +192,10 @@ class ProductRepository:
 
         await session.commit()
 
-        result = await session.execute(
-            select(Product)
-            .where(Product.id == db_product.id)
-            .options(
-                joinedload(Product.variations).joinedload(
-                    ProductVariation.images
-                )
-            )
-        )
+        stmt = select(Product).where(Product.id == db_product.id)
+        stmt = ProductRepository._apply_favorites_and_options(stmt, None)
  
+        result = await session.execute(stmt)
         return result.unique().scalar_one()
 
     @staticmethod
@@ -256,38 +258,29 @@ class ProductRepository:
         logger.info(f"[SOFT DELETE] Transação concluída e outbox salvo. Produto {product_id} deletado.")
 
     @staticmethod
-    async def get_by_ids(session: AsyncSession, list_ids: list[int]):
+    async def get_by_ids(
+        session: AsyncSession, 
+        list_ids: list[int],
+        user=None,  # Adicionado suporte ao usuário
+    ) -> list[Product]:
         print(list_ids)
-        query = (
-            select(Product)
-            .where(Product.id.in_(list_ids))
-            .options(
-                joinedload(Product.variations).joinedload(
-                    ProductVariation.images
-                )
-            )
-        )
-        result = await session.execute(query)
+        stmt = select(Product).where(Product.id.in_(list_ids))
+        stmt = ProductRepository._apply_favorites_and_options(stmt, user)
+        
+        result = await session.execute(stmt)
         return list(result.unique().scalars().all())
 
-    
     @staticmethod
     async def get_by_store_id(
         session: AsyncSession,
         store_id: int,
+        user=None,  # Adicionado suporte ao usuário
     ) -> list[Product]:
-        query = (
-            select(Product)
-            .where(Product.store_id == store_id)
-            .options(
-                joinedload(Product.variations)
-                .joinedload(ProductVariation.images)
-            )
-        )
+        stmt = select(Product).where(Product.store_id == store_id)
+        stmt = ProductRepository._apply_favorites_and_options(stmt, user)
 
-        result = await session.execute(query)
+        result = await session.execute(stmt)
         return result.unique().scalars().all()
-
 
 class StockReservationRepository:
     @staticmethod

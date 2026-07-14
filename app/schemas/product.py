@@ -108,7 +108,7 @@ class ProductPublic(BaseModel):
     description: str
     store_id: int
     is_active: bool
-    is_favorite: bool 
+    is_favorite: bool | None
 
     variations: List[ProductVariationPublic]
 
@@ -127,6 +127,7 @@ class ImageUpdate(BaseModel):
 
 class VariationUpdate(BaseModel):
     id: Optional[int] = None
+    temp_id: str
     price: float
     weight: float
     length: float
@@ -150,7 +151,7 @@ class FilterProduct(BaseModel):
     offset: int = Field(ge=0, default=0)
     limit: int = Field(gt=0, default=10)
     
-    q: Optional[str] = Field(default=None, min_length=3)
+    q: Optional[str] = Field(default=None, min_length=1)
     category_id: Optional[int] = None
     min_price: Optional[float] = Field(default=None, gt=0)
     max_price: Optional[float] = Field(default=None, gt=0)
