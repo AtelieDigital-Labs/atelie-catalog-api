@@ -2,7 +2,7 @@ from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
 from app.core.config import Settings
@@ -10,25 +10,20 @@ from app.core.context import current_user_id
 
 settings = Settings()
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/auth/login/', auto_error=True)
-async def get_token_from_cookie_or_header(request: Request) -> str | None:
-    # 1. Tenta buscar nos cookies do navegador
-    token = request.cookies.get("access_token") # Altere para o nome real do seu cookie
-    
+security = HTTPBearer(auto_error=False)
+
+async def get_token_from_cookie_or_header(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+):
+    token = request.cookies.get("access")
     if token:
         return token
 
-    # 2. Se não achou no cookie, tenta buscar no cabeçalho Authorization
-    authorization: str = request.headers.get("Authorization")
-    if authorization:
-        try:
-            scheme, param = authorization.split()
-            if scheme.lower() == "bearer":
-                return param
-        except ValueError:
-            return None
+    if credentials:
+        return credentials.credentials
 
-    return None
+    raise HTTPException(status_code=401, detail="Not authenticated")
 
 class AuthUser:
     def __init__(self, id: str):
