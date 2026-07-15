@@ -7,6 +7,7 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_as_dataclass,
     mapped_column,
+    query_expression,
     relationship,
 )
 from datetime import datetime, timedelta, timezone
@@ -28,6 +29,7 @@ class Product(VisibilityMixin):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    is_favorite: Mapped[bool] = query_expression()
     variations: Mapped[List['ProductVariation']] = relationship(
         init=False,
         back_populates='product',

@@ -1,11 +1,13 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
+from app.core.minio import S3Client
 from app.core.security import CurrentUser
+from app.schemas.product import ProductPublic
 from app.schemas.store import (
     CategoryList,
     CategoryPublic,
@@ -18,6 +20,7 @@ from app.schemas.store import (
     StoreUpdate,
     StoreWithProductsPublic,
 )
+from app.services.product import ProductService
 from app.services.store import CategoryService, StoreService
 
 router = APIRouter(prefix='/stores', tags=['stores'])
@@ -45,11 +48,21 @@ async def list_categories(session: Session):
 
 @router.post('/', response_model=StorePublic, status_code=HTTPStatus.CREATED)
 async def create_store(
-    payload: StoreSchema,
+    image: UploadFile,
+    banner: UploadFile,
     session: Session,
+    storage: S3Client,
     user: CurrentUser,
+    payload: StoreSchema = Depends(StoreSchema.as_form),
 ):
-    return await StoreService.create(session, payload, user.id)
+    return await StoreService.create(
+        session=session,
+        payload=payload,
+        image=image,
+        banner=banner,
+        user_id=user.id,
+        storage=storage
+    )
 
 
 @router.get('/', response_model=StoreList)
@@ -63,11 +76,18 @@ async def list_stores(
 
 @router.patch('/me', response_model=StorePublic)
 async def update_my_store(
-    payload: StoreUpdate,
     user: CurrentUser,
     session: Session,
+    image: UploadFile | None = None,
+    banner: UploadFile | None = None,
+    payload: StoreUpdate = Depends(StoreUpdate.as_form)
 ):
-    return await StoreService.update_my_store(session, payload, user.id)
+    return await StoreService.update_my_store(
+        session=session,
+        payload=payload,
+        image=image, 
+        banner=banner,
+        user_id=user.id)
 
 
 @router.patch('/categories/{category_id}', response_model=CategoryPublic)
@@ -99,3 +119,11 @@ async def get_store_artisan(
 @router.get('/{store_id}', response_model=StoreWithProductsPublic)
 async def get_store(store_id: int, session: Session):
     return await StoreService.get_with_products(session, store_id)
+
+@router.get("/me/products/", response_model=list[ProductPublic])
+async def get_me_store_products(user: CurrentUser, session: Session):
+    return await StoreService.get_products(session, user.id)
+    
+@router.get("/{store_id}/products/", response_model=list[ProductPublic])
+async def get_store_products(store_id: int, session: Session):
+    return await ProductService.get_by_store_id(session, store_id)

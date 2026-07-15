@@ -1,3 +1,4 @@
+from app.services.storage import StorageService
 from infra.messaging.broker import broker
 from infra.messaging.exchanges import declare_exchange
 from contextlib import asynccontextmanager
@@ -9,6 +10,7 @@ from infra.messaging.worker import process_outbox_messages
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    StorageService.ensure_bucket()
     print("Conectando ao RabbitMQ e criando estruturas...")
     await broker.connect() 
     await broker.start()

@@ -1,10 +1,16 @@
 from decimal import Decimal
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 
+from fastapi import Query
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class ProductImageSchema(BaseModel):
+    # url: str = Field(
+    #     max_length=255,
+    #     examples=['meu-bucket.s3.atelie.com/foto.jpg'],
+    # )
+
     url: str = Field(
         max_length=255,
         examples=['meu-bucket.s3.atelie.com/foto.jpg'],
@@ -24,6 +30,7 @@ class ProductImagePublic(BaseModel):
 
 
 class ProductVariationSchema(BaseModel):
+    temp_id: str
     price: Decimal = Field(gt=0, examples=[89.90])
     weight: float = Field(gt=0, examples=[0.3])
     length: float = Field(gt=0, examples=[30.0])
@@ -48,17 +55,17 @@ class ProductVariationSchema(BaseModel):
         examples=['M'],
     )
 
-    images: List[ProductImageSchema] = Field(
-        default=[],
-        examples=[
-            [
-                {
-                    'url': 'https://meu-bucket.s3.amazonaws.com/foto.jpg',
-                    'is_primary': True,
-                }
-            ]
-        ],
-    )
+    # images: List[ProductImageSchema] = Field(
+    #     default=[],
+    #     examples=[
+    #         [
+    #             {
+    #                 'url': 'https://meu-bucket.s3.amazonaws.com/foto.jpg',
+    #                 'is_primary': True,
+    #             }
+    #         ]
+    #     ],
+    # )
 
 
 class ProductVariationPublic(BaseModel):
@@ -101,6 +108,7 @@ class ProductPublic(BaseModel):
     description: str
     store_id: int
     is_active: bool
+    is_favorite: bool | None
 
     variations: List[ProductVariationPublic]
 
@@ -119,6 +127,7 @@ class ImageUpdate(BaseModel):
 
 class VariationUpdate(BaseModel):
     id: Optional[int] = None
+    temp_id: str
     price: float
     weight: float
     length: float
@@ -141,8 +150,8 @@ class ProductUpdate(BaseModel):
 class FilterProduct(BaseModel):
     offset: int = Field(ge=0, default=0)
     limit: int = Field(gt=0, default=10)
-
-    q: Optional[str] = Field(default=None, min_length=3)
+    
+    q: Optional[str] = Field(default=None, min_length=1)
     category_id: Optional[int] = None
     min_price: Optional[float] = Field(default=None, gt=0)
     max_price: Optional[float] = Field(default=None, gt=0)

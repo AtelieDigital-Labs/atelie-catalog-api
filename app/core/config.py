@@ -11,5 +11,10 @@ class Settings(BaseSettings):
     MESSAGING_URL: str
     SECRET_KEY: str
     ALGORITHM: str
+    MINIO_ENDPOINT_URL: str
+    MINIO_ACCESS_KEY: str
+    MINIO_SECRET_KEY: str
+    MINIO_BUCKET: str
+    MINIO_PUBLIC_URL: str
 
-settings = Settings() #
+settings = Settings()

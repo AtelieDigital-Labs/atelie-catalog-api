@@ -36,3 +36,4 @@ async def declare_exchange(broker: RabbitBroker):
     await broker.declare_exchange(exchange_catalogs)
     await broker.declare_exchange(exchange_orders)
     await broker.declare_exchange(exchange_dlq)
+    await broker.declare_exchange(exchange_log)

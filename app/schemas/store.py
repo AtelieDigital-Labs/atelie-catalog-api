@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
+from fastapi import Depends, Form, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.product import ProductPublic
@@ -12,12 +13,32 @@ class Message(BaseModel):
 
 class AddressSchema(BaseModel):
     street: str = Field(max_length=255)
-    number: int = Field(gt=0)
+    number: int = Field(gt=0, examples=[29])
     neighborhood: str = Field(max_length=255)
     city: str = Field(max_length=100)
     state: str = Field(min_length=2, max_length=2)
     zip_code: str = Field(max_length=9)
     complement: Optional[str] = Field(default=None, max_length=255)
+
+    @classmethod
+    def as_form(
+        cls,
+        street: str = Form(),
+        number: int = Form(exemple=20),
+        city: str = Form(...),
+        state: str = Form(examples=["RN"]),
+        zip_code: str = Form(examples=["00000-000"]),
+        neighborhood: str = Form(...)
+
+    ):
+        return cls(
+                street=street,
+                number=number,
+                neighborhood=neighborhood,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+        )
 
 
 class AddressPublic(AddressSchema):
@@ -43,13 +64,40 @@ class StoreSchema(BaseModel):
     name: str = Field(min_length=3, max_length=150)
     description: str | None = Field(default=None, max_length=500)
     category_id: int = Field(description='ID da categoria pré-existente')
+    address: AddressSchema
+
+    pix_key: str = Field(
+        max_length=150,
+    )
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        description: str | None = Form(None),
+        category_id: int = Form(...),
+        pix_key: str = Form(examples=['artesao@email.com']),
+        address: AddressSchema = Depends(AddressSchema.as_form),
+    ):
+        return cls(
+            name=name,
+            description=description,
+            category_id=category_id,
+            pix_key=pix_key,
+            address=address,
+        )
+
+
+class StoreSchemaPrivate(BaseModel):
+    name: str = Field(min_length=3, max_length=150)
+    description: str | None = Field(default=None, max_length=500)
+    category_id: int = Field(description='ID da categoria pré-existente')
     image: str | None = Field(default=None, max_length=255)
     banner: str | None = Field(default=None, max_length=255)
     address: AddressSchema
 
     pix_key: str = Field(
         max_length=150,
-        examples=['artesao@email.com'],
     )
 
 
@@ -86,8 +134,43 @@ class AddressUpdate(BaseModel):
     zip_code: Optional[str] = Field(default=None, max_length=9)
     complement: Optional[str] = Field(default=None, max_length=255)
 
+    @classmethod
+    def as_form(
+        cls,
+        street: Annotated[str | None, Form()] = None,
+        number: Annotated[int | None, Form()] = None,
+        city: Annotated[str | None, Form()] = None,
+        state: Annotated[str | None, Form(examples=["RN"])] =  None,
+        zip_code: Annotated[str | None, Form(examples=["00000-000"])] = None,
+        neighborhood: Annotated[str | None, Form()] = None
+
+    ):
+        return cls(
+                street=street,
+                number=number,
+                neighborhood=neighborhood,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+        )
+
 
 class StoreUpdate(BaseModel):
+    description: str | None = Field(default=None, max_length=500)
+    address: AddressUpdate | None = None
+
+    @classmethod
+    def as_form(
+        cls,
+        description: Annotated[str | None, Form()] = None,
+        address: Annotated[AddressUpdate | None, Depends(AddressUpdate.as_form)] = None,
+    ) -> "StoreUpdate":
+        return cls(
+            description=description,
+            address=address,
+        )
+
+class StoreUpdatePrivate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=500)
     image: Optional[str] = Field(default=None, max_length=255)
     banner: Optional[str] = Field(default=None, max_length=255)
