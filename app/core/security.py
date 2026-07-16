@@ -23,7 +23,7 @@ async def get_token_from_cookie_or_header(
     if credentials:
         return credentials.credentials
 
-    raise HTTPException(status_code=401, detail="Not authenticated")
+    return None
 
 class AuthUser:
     def __init__(self, id: str):

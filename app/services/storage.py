@@ -83,6 +83,7 @@ class StorageService:
 
     @staticmethod
     def presigned_url(key: str, expires_in: int = 300) -> str:
+        # 1. Gera a URL assinada interna (ex: http://minio:9000/catalogs/stores/...)
         url = StorageService._client.generate_presigned_url(
             "get_object",
             Params={
@@ -91,16 +92,26 @@ class StorageService:
             },
             ExpiresIn=expires_in,
         )
-
-        internal = urlparse(settings.MINIO_ENDPOINT_URL)
-        public = urlparse(settings.MINIO_PUBLIC_URL)
-
+    
+        public = urlparse(settings.MINIO_PUBLIC_URL) # ex: https://ateliedigital.dev.br/media
         parsed = urlparse(url)
-
+    
+        # 2. Extrai os caminhos limpando barras extras para evitar '//' na URL
+        public_path = public.path.strip("/")       # Resultado: "media"
+        original_path = parsed.path.lstrip("/")   # Resultado: "catalogs/stores/..."
+    
+        # 3. Junta os dois caminhos de forma segura
+        if public_path:
+            new_path = f"/{public_path}/{original_path}"
+        else:
+            new_path = f"/{original_path}"
+    
+        # 4. Remonta a URL substituindo também o 'path'
         return urlunparse(
             parsed._replace(
                 scheme=public.scheme,
                 netloc=public.netloc,
+                path=new_path
             )
         )
 
