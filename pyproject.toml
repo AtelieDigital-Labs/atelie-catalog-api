@@ -5,20 +5,30 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "aiosqlite>=0.22.1",
+    "alembic>=1.18.4",
+    "boto3>=1.40.61",
     "fastapi[standard]>=0.136.0",
+    "faststream[cli,rabbit]>=0.7.1",
+    "psycopg[binary]>=3.3.3",
+    "pwdlib[argon2]>=0.3.0",
     "pydantic>=2.13.3",
     "pydantic-settings>=2.14.0",
+    "pyjwt>=2.12.1",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.26",
     "sqlalchemy>=2.0.49",
 ]
 
 [dependency-groups]
 dev = [
+    "factory-boy>=3.3.3",
     "httpx>=0.28.1",
     "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.11",
     "taskipy>=1.14.1",
+    "testcontainers>=4.14.2",
 ]
 
 [tool.ruff]
@@ -50,3 +60,10 @@ post_test = 'coverage html'
 
 # Execução
 run = 'fastapi dev app/main.py'
+
+# Docker
+up = 'docker compose up -d'
+down = 'docker compose down'
+logs = 'docker compose logs -f catalog_api'
+rebuild = 'docker compose up -d --build'
+restart = 'docker compose restart'

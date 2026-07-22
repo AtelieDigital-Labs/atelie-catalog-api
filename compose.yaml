@@ -1,0 +1,17 @@
+services:
+  catalog_api:
+    build: .
+    container_name: catalog_service_api
+    image: atelie_catalog_api
+    ports:
+      - "8008:8000"
+    volumes:
+      - .:/app
+    networks:
+      - atelie-network
+    env_file:
+      - .env
+
+networks:
+  atelie-network:
+    external: true

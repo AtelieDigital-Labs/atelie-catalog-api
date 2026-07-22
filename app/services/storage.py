@@ -1,0 +1,125 @@
+from pathlib import Path
+from uuid import uuid4
+
+from boto3 import client
+from botocore.client import BaseClient
+from botocore.exceptions import ClientError
+from fastapi import UploadFile
+
+from app.core.config import settings
+from urllib.parse import urlparse, urlunparse
+
+
+class StorageService:
+    _client: BaseClient = client(
+        "s3",
+        endpoint_url=settings.MINIO_ENDPOINT_URL,
+        aws_access_key_id=settings.MINIO_ACCESS_KEY,
+        aws_secret_access_key=settings.MINIO_SECRET_KEY,
+        region_name="us-east-1",
+    )
+
+    _bucket = settings.MINIO_BUCKET
+
+    @staticmethod
+    def ensure_bucket() -> None:
+        try:
+            StorageService._client.head_bucket(
+                Bucket=StorageService._bucket,
+            )
+        except ClientError as exc:
+            error_code = exc.response["Error"]["Code"]
+
+            if error_code in ("404", "NoSuchBucket"):
+                StorageService._client.create_bucket(
+                    Bucket=StorageService._bucket,
+                )
+            else:
+                raise
+
+    @staticmethod
+    def upload(
+        file: UploadFile,
+        directory: str,
+    ) -> str:
+        key = f"{directory}/{uuid4()}{Path(file.filename).suffix}"
+
+        StorageService._client.upload_fileobj(
+            file.file,
+            StorageService._bucket,
+            key,
+            ExtraArgs={
+                "ContentType": file.content_type,
+            },
+        )
+
+        return key
+
+    @staticmethod
+    def delete(key: str) -> None:
+        StorageService._client.delete_object(
+            Bucket=StorageService._bucket,
+            Key=key,
+        )
+
+    @staticmethod
+    def exists(key: str) -> bool:
+        try:
+            StorageService._client.head_object(
+                Bucket=StorageService._bucket,
+                Key=key,
+            )
+            return True
+        except ClientError:
+            return False
+
+    @staticmethod
+    def public_url(key: str) -> str:
+        return (
+            f"{settings.MINIO_PUBLIC_URL}/"
+            f"{StorageService._bucket}/"
+            f"{key}"
+        )
+
+    @staticmethod
+    def presigned_url(key: str, expires_in: int = 300) -> str:
+        # 1. Gera a URL assinada interna (ex: http://minio:9000/catalogs/stores/...)
+        url = StorageService._client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": StorageService._bucket,
+                "Key": key,
+            },
+            ExpiresIn=expires_in,
+        )
+    
+        public = urlparse(settings.MINIO_PUBLIC_URL) # ex: https://ateliedigital.dev.br/media
+        parsed = urlparse(url)
+    
+        # 2. Extrai os caminhos limpando barras extras para evitar '//' na URL
+        public_path = public.path.strip("/")       # Resultado: "media"
+        original_path = parsed.path.lstrip("/")   # Resultado: "catalogs/stores/..."
+    
+        # 3. Junta os dois caminhos de forma segura
+        if public_path:
+            new_path = f"/{public_path}/{original_path}"
+        else:
+            new_path = f"/{original_path}"
+    
+        # 4. Remonta a URL substituindo também o 'path'
+        return urlunparse(
+            parsed._replace(
+                scheme=public.scheme,
+                netloc=public.netloc,
+                path=new_path
+            )
+        )
+
+    @staticmethod
+    def download(key: str) -> bytes:
+        response = StorageService._client.get_object(
+            Bucket=StorageService._bucket,
+            Key=key,
+        )
+
+        return response["Body"].read()
